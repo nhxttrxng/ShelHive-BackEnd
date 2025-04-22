@@ -13,15 +13,16 @@ exports.register = async (req, res) => {
     return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
 
   try {
-    const user = await User.getByEmail(email);
+    const user = await User.getUserByEmail(email);
     if (user) return res.status(409).json({ message: 'Email đã được đăng ký' });
 
     const hash = await bcrypt.hash(mat_khau, 10);
-    await User.create({ email, ho_ten, sdt, mat_khau: hash });
+    await User.addUser({ email, ho_ten, sdt, mat_khau: hash });
 
     res.status(201).json({ message: 'Đăng ký thành công' });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi server' });
+    console.error(err);  // Log chi tiết lỗi ra console
+    return res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
 
@@ -34,7 +35,7 @@ exports.login = async (req, res) => {
   const table = email.endsWith('@admin.com') ? Admin : User;
 
   try {
-    const user = await table.getByEmail(email);
+    const user = await table.getUserByEmail(email);
     if (!user) return res.status(401).json({ message: 'Email không tồn tại' });
 
     const match = await bcrypt.compare(mat_khau, user.mat_khau);
@@ -53,7 +54,7 @@ exports.forgotPassword = async (req, res) => {
   if (!email) return res.status(400).json({ message: 'Thiếu email' });
 
   try {
-    const user = await User.getByEmail(email);
+    const user = await User.getUserByEmail(email);
     if (!user) return res.status(404).json({ message: 'Email không tồn tại' });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
