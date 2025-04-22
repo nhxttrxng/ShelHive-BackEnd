@@ -1,4 +1,4 @@
-const db = require('./Database'); // Đảm bảo đã kết nối với Database
+const db = require('../db/database'); // Đảm bảo đã kết nối với Database
 
 // **1. Thêm mới một User**
 function addUser(user) {

@@ -1,4 +1,4 @@
-const db = require('./Database'); // Đảm bảo đã kết nối với Database
+const db = require('../db/database'); // Đảm bảo đã kết nối với Database
 
 // **1. Thêm OTP cho User hoặc Admin**
 function addOTP(email, otp, expiration_time, role) {
