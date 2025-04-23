@@ -1,6 +1,13 @@
-const db = require('../db/database'); // Đảm bảo đã kết nối với Database
+const db = require('../db/database'); // Kết nối database
 
-// **1. Thêm mới một User**
+// **1. Lấy tất cả người dùng**
+function getAllUsers() {
+  const stmt = db.prepare("SELECT * FROM USER");
+  const users = stmt.all();
+  return users;
+}
+
+// **2. Thêm mới một User**
 function addUser(user) {
   const stmt = db.prepare(`
     INSERT INTO USER (email, ho_ten, dia_chi, gioi_tinh, que_quan, mat_khau, sdt, cccd, ngay_sinh, avt)
@@ -10,14 +17,14 @@ function addUser(user) {
   return result;
 }
 
-// **2. Lấy thông tin User theo email**
+// **3. Lấy thông tin User theo email**
 function getUserByEmail(email) {
   const stmt = db.prepare("SELECT * FROM USER WHERE email = ?");
   const user = stmt.get(email);
   return user;
 }
 
-// **3. Cập nhật thông tin User**
+// **4. Cập nhật thông tin User**
 function updateUser(email, updatedData) {
   const stmt = db.prepare(`
     UPDATE USER 
@@ -28,43 +35,23 @@ function updateUser(email, updatedData) {
   return result;
 }
 
-// **4. Xóa User**
+// **5. Xóa User**
 function deleteUser(email) {
   const stmt = db.prepare("DELETE FROM USER WHERE email = ?");
   const result = stmt.run(email);
   return result;
 }
 
-// **5. Thêm OTP cho User**
-function addOTP(email, otp, expiration_time, role) {
-  const stmt = db.prepare(`
-    INSERT INTO OTP (email, otp, expiration_time, role) 
-    VALUES (?, ?, ?, ?)
-  `);
-  const result = stmt.run(email, otp, expiration_time, role);
-  return result;
-}
-
-// **6. Kiểm tra OTP của User**
-function checkOTP(email, otp) {
-  const stmt = db.prepare("SELECT * FROM OTP WHERE email = ? AND otp = ?");
-  const otpRecord = stmt.get(email, otp);
-  return otpRecord;
-}
-
-// **7. Xóa OTP sau khi sử dụng hoặc hết hạn**
-function deleteOTP(email, otp) {
-  const stmt = db.prepare("DELETE FROM OTP WHERE email = ? AND otp = ?");
-  const result = stmt.run(email, otp);
-  return result;
-}
+function updatePassword(email, hashedPassword) {
+  const stmt = db.prepare("UPDATE USER SET mat_khau = ? WHERE email = ?");
+  return stmt.run(hashedPassword, email);
+};
 
 module.exports = {
+  getAllUsers,
   addUser,
   getUserByEmail,
   updateUser,
   deleteUser,
-  addOTP,
-  checkOTP,
-  deleteOTP
+  updatePassword
 };

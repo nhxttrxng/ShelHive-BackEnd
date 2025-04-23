@@ -13,37 +13,48 @@ exports.register = async (req, res) => {
     return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
 
   try {
-    const user = await User.getUserByEmail(email);
-    if (user) return res.status(409).json({ message: 'Email đã được đăng ký' });
+    const existingAdmin = await Admin.getAdminByEmail(email);
+    const existingUser = await User.getUserByEmail(email);
+
+    if (existingAdmin || existingUser)
+      return res.status(409).json({ message: 'Email đã được đăng ký' });
 
     const hash = await bcrypt.hash(mat_khau, 10);
     await User.addUser({ email, ho_ten, sdt, mat_khau: hash });
 
     res.status(201).json({ message: 'Đăng ký thành công' });
   } catch (err) {
-    console.error(err);  // Log chi tiết lỗi ra console
+    console.error('Lỗi khi đăng ký:', err);
     return res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
 
-// Đăng nhập user & admin
+// Đăng nhập
 exports.login = async (req, res) => {
   const { email, mat_khau } = req.body;
   if (!email || !mat_khau)
     return res.status(400).json({ message: 'Thiếu thông tin' });
 
-  const table = email.endsWith('@admin.com') ? Admin : User;
-
   try {
-    const user = await table.getUserByEmail(email);
-    if (!user) return res.status(401).json({ message: 'Email không tồn tại' });
+    let user = await Admin.getAdminByEmail(email);
+    let role = 'admin';
+
+    if (!user) {
+      user = await User.getUserByEmail(email);
+      role = 'user';
+    }
+
+    if (!user)
+      return res.status(401).json({ message: 'Thông tin đăng nhập không hợp lệ' });
 
     const match = await bcrypt.compare(mat_khau, user.mat_khau);
-    if (!match) return res.status(401).json({ message: 'Sai mật khẩu' });
+    if (!match)
+      return res.status(401).json({ message: 'Thông tin đăng nhập không hợp lệ' });
 
-    const token = jwt.sign({ email, role: table.name.toLowerCase() }, process.env.JWT_SECRET, { expiresIn: '2h' });
-    res.status(200).json({ token, role: table.name.toLowerCase() });
+    const token = jwt.sign({ email, role }, process.env.JWT_SECRET, { expiresIn: '2h' });
+    res.status(200).json({ token, role });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
@@ -55,12 +66,15 @@ exports.forgotPassword = async (req, res) => {
 
   try {
     const user = await User.getUserByEmail(email);
-    if (!user) return res.status(404).json({ message: 'Email không tồn tại' });
+    const admin = await Admin.getAdminByEmail(email);
+
+    if (!user && !admin)
+      return res.status(404).json({ message: 'Email không tồn tại' });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Math.floor(Date.now() / 1000) + 300;
+    const expires = Math.floor(Date.now() / 1000) + 300; // 5 phút
 
-    await OTP.create({ email, otp, expiration_time: expires });
+    await OTP.addOTP(email, otp, expires, user ? 'user' : 'admin');
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -73,16 +87,16 @@ exports.forgotPassword = async (req, res) => {
     const mailOptions = {
       from: process.env.MAIL_USER,
       to: email,
-      subject: 'Mã OTP đổi mật khẩu',
-      text: `Mã OTP của bạn là: ${otp} (có hiệu lực 5 phút)`
+      subject: 'Mã xác thực OTP',
+      text: `Mã OTP của bạn là: ${otp}. Mã sẽ hết hạn sau 5 phút.`
     };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) return res.status(500).json({ message: 'Gửi mail thất bại' });
-      res.status(200).json({ message: 'Đã gửi mã OTP' });
-    });
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Gửi OTP thành công' });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi server' });
+    console.error('Lỗi khi gửi OTP:', err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
 
@@ -96,16 +110,17 @@ exports.verifyOtp = async (req, res) => {
   try {
     const row = await OTP.getByEmailAndOtp(email, otp);
     if (!row) return res.status(404).json({ message: 'OTP sai hoặc không tồn tại' });
-    if (row.expiration_time < now)
+
+    if (OTP.isOTPExpired(row.expiration_time, now))
       return res.status(410).json({ message: 'OTP đã hết hạn' });
 
     res.status(200).json({ message: 'OTP hợp lệ' });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi server' });
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
 
-// Đổi mật khẩu 
+// Đổi mật khẩu
 exports.resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
   if (!email || !otp || !newPassword)
@@ -115,12 +130,74 @@ exports.resetPassword = async (req, res) => {
     const row = await OTP.getByEmailAndOtp(email, otp);
     if (!row) return res.status(404).json({ message: 'OTP không đúng' });
 
+    const now = Math.floor(Date.now() / 1000);
+    if (OTP.isOTPExpired(row.expiration_time, now))
+      return res.status(410).json({ message: 'OTP đã hết hạn' });
+
     const hash = await bcrypt.hash(newPassword, 10);
-    await User.updatePassword(email, hash);
-    await OTP.deleteByEmail(email); // Xóa OTP sau khi đổi mật khẩu
+
+    const user = await User.getUserByEmail(email);
+    const admin = await Admin.getAdminByEmail(email);
+
+    await OTP.deleteOTP(email); // Xoá OTP trước để tránh lỗi lặp lại nếu cập nhật mật khẩu thất bại
+
+    if (user) {
+      await User.updatePassword(email, hash);
+    } else if (admin) {
+      await Admin.updatePassword(email, hash);
+    } else {
+      return res.status(404).json({ message: 'Email không tồn tại trong hệ thống' });
+    }
 
     res.status(200).json({ message: 'Đổi mật khẩu thành công' });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi server' });
+    console.error('Lỗi khi reset mật khẩu:', err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+// Gửi lại OTP
+exports.resendOtp = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'Thiếu email' });
+
+  try {
+    const user = await User.getUserByEmail(email);
+    const admin = await Admin.getAdminByEmail(email);
+
+    if (!user && !admin)
+      return res.status(404).json({ message: 'Email không tồn tại' });
+
+    // Xoá OTP cũ nếu có
+    await OTP.deleteOTP(email);
+
+    // Tạo OTP mới
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Math.floor(Date.now() / 1000) + 300;
+
+    await OTP.addOTP(email, otp, expires, user ? 'user' : 'admin');
+
+    // Gửi mail
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
+      }
+    });
+
+    const mailOptions = {
+      from: process.env.MAIL_USER,
+      to: email,
+      subject: 'Gửi lại mã OTP',
+      text: `Mã OTP mới của bạn là: ${otp}. Mã sẽ hết hạn sau 5 phút.`
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Gửi lại OTP thành công' });
+  } catch (err) {
+    console.error('Lỗi khi gửi lại OTP:', err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
