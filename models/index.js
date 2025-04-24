@@ -1,5 +1,5 @@
-// Kết nối với database
-const db = require("../db/database");
+// Kết nối với database PostgreSQL
+const pool = require("../db/postgres"); // Kết nối PostgreSQL
 
 // Import mô hình cho các bảng
 const User = require("./user.model");
@@ -10,6 +10,7 @@ const HoaDon = require("./hoadon.model");
 const ThongBao = require("./thongbao.model");
 const SuCo = require("./suco.model");
 const GiaHan = require("./giahan.model");
+const OTP = require("./otp.model");
 
 // Xuất ra các mô hình để sử dụng ở nơi khác
 module.exports = {
@@ -21,5 +22,6 @@ module.exports = {
   ThongBao,
   SuCo,
   GiaHan,
-  db,  // Nếu cần, có thể xuất db để sử dụng ở controller hoặc route
+  OTP,
+  pool,  // Xuất pool để có thể dùng chung kết nối PostgreSQL trong các mô hình khác
 };

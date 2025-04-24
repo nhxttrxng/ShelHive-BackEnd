@@ -74,7 +74,12 @@ exports.forgotPassword = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = Math.floor(Date.now() / 1000) + 300; // 5 phút
 
-    await OTP.addOTP(email, otp, expires, user ? 'user' : 'admin');
+    await OTP.addOTP({
+      email,
+      otp,
+      expiration_time: expires,
+      role: user ? 'user' : 'admin'
+    });
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -111,7 +116,7 @@ exports.verifyOtp = async (req, res) => {
     const row = await OTP.getByEmailAndOtp(email, otp);
     if (!row) return res.status(404).json({ message: 'OTP sai hoặc không tồn tại' });
 
-    if (OTP.isOTPExpired(row.expiration_time, now))
+    if (OTP.isExpired(row.expiration_time, now))
       return res.status(410).json({ message: 'OTP đã hết hạn' });
 
     res.status(200).json({ message: 'OTP hợp lệ' });
@@ -131,7 +136,7 @@ exports.resetPassword = async (req, res) => {
     if (!row) return res.status(404).json({ message: 'OTP không đúng' });
 
     const now = Math.floor(Date.now() / 1000);
-    if (OTP.isOTPExpired(row.expiration_time, now))
+    if (OTP.isExpired(row.expiration_time, now))
       return res.status(410).json({ message: 'OTP đã hết hạn' });
 
     const hash = await bcrypt.hash(newPassword, 10);
@@ -139,7 +144,7 @@ exports.resetPassword = async (req, res) => {
     const user = await User.getUserByEmail(email);
     const admin = await Admin.getAdminByEmail(email);
 
-    await OTP.deleteOTP(email); // Xoá OTP trước để tránh lỗi lặp lại nếu cập nhật mật khẩu thất bại
+    await OTP.deleteByEmail(email); // Xoá OTP trước để tránh lỗi lặp lại nếu cập nhật mật khẩu thất bại
 
     if (user) {
       await User.updatePassword(email, hash);
@@ -169,7 +174,7 @@ exports.resendOtp = async (req, res) => {
       return res.status(404).json({ message: 'Email không tồn tại' });
 
     // Xoá OTP cũ nếu có
-    await OTP.deleteOTP(email);
+    await OTP.deleteByEmail(email);
 
     // Tạo OTP mới
     const otp = Math.floor(100000 + Math.random() * 900000).toString();

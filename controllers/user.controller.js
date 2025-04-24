@@ -39,12 +39,12 @@ exports.update = async (req, res) => {
   if (!email) return res.status(400).json({ message: 'Thiếu email' });
 
   try {
-    const result = await User.updateUser(email, data);
+    const updatedUser = await User.updateUser(email, data);
 
-    if (result.changes === 0)
+    if (!updatedUser)
       return res.status(404).json({ message: 'Không tìm thấy người dùng để cập nhật' });
 
-    res.status(200).json({ message: 'Cập nhật người dùng thành công', result });
+    res.status(200).json({ message: 'Cập nhật người dùng thành công', user: updatedUser });
   } catch (err) {
     console.error('Lỗi khi cập nhật người dùng:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
@@ -60,7 +60,7 @@ exports.remove = async (req, res) => {
   try {
     const result = await User.deleteUser(email);
 
-    if (result.changes === 0)
+    if (result.rowCount === 0)  // Cũng thay đổi `changes` thành `rowCount` khi dùng PostgreSQL
       return res.status(404).json({ message: 'Không tìm thấy người dùng để xóa' });
 
     res.status(200).json({ message: 'Xóa người dùng thành công', result });
@@ -72,16 +72,16 @@ exports.remove = async (req, res) => {
 
 // Lấy thông tin user theo email
 exports.getUserByEmail = async (req, res) => {
-    const { email } = req.params;
-    if (!email) return res.status(400).json({ message: 'Thiếu email' });
-  
-    try {
-      const user = await User.getUserByEmail(email);
-      if (!user) return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-  
-      res.status(200).json(user);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Lỗi server', error: err.message });
-    }
-  };
+  const { email } = req.params;
+  if (!email) return res.status(400).json({ message: 'Thiếu email' });
+
+  try {
+    const user = await User.getUserByEmail(email);
+    if (!user) return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+
+    res.status(200).json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};

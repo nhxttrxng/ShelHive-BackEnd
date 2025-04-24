@@ -17,7 +17,11 @@ exports.getAllOtp = async (req, res) => {
 exports.deleteOtpByEmail = async (req, res) => {
   const { email } = req.params;
   try {
-    await OTP.deleteByEmail(email);
+    const result = await OTP.deleteByEmail(email);
+
+    if (result.rowCount === 0)  // Kiểm tra với PostgreSQL
+      return res.status(404).json({ message: 'Không tìm thấy OTP với email này' });
+
     res.status(200).json({ message: 'Xóa OTP thành công' });
   } catch (err) {
     res.status(500).json({ message: 'Lỗi server khi xóa OTP', error: err.message });
@@ -28,7 +32,11 @@ exports.deleteOtpByEmail = async (req, res) => {
 exports.deleteExpiredOtps = async (req, res) => {
   const now = Math.floor(Date.now() / 1000);
   try {
-    await OTP.deleteExpired(now);
+    const result = await OTP.deleteExpired(now);
+
+    if (result.rowCount === 0)  // Kiểm tra với PostgreSQL
+      return res.status(404).json({ message: 'Không có OTP hết hạn để xóa' });
+
     res.status(200).json({ message: 'Đã xóa OTP hết hạn' });
   } catch (err) {
     res.status(500).json({ message: 'Lỗi server khi xóa OTP hết hạn', error: err.message });

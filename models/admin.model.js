@@ -1,49 +1,67 @@
-const db = require('../db/database'); // Đảm bảo đã kết nối với Database
+const pool = require('../db/postgres'); // Pool từ file db/postgres.js
 
-function getAllAdmins() {
-  const stmt = db.prepare("SELECT * FROM ADMIN");
-  const admins = stmt.all();
-  return admins;
+// 1. Lấy tất cả Admin
+async function getAllAdmins() {
+  const res = await pool.query("SELECT * FROM ADMIN");
+  return res.rows;
 }
 
-// **1. Thêm mới một Admin**
-function addAdmin(admin) {
-  const stmt = db.prepare(`
+// 2. Thêm mới một Admin
+async function addAdmin(admin) {
+  const query = `
     INSERT INTO ADMIN (email, ho_ten, mat_khau, sdt, avt)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  const result = stmt.run(admin.email, admin.ho_ten, admin.mat_khau, admin.sdt, admin.avt);
-  return result;
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *
+  `;
+  const values = [admin.email, admin.ho_ten, admin.mat_khau, admin.sdt, admin.avt];
+  const res = await pool.query(query, values);
+  return res.rows[0];
 }
 
-// **2. Lấy thông tin Admin theo email**
-function getAdminByEmail(email) {
-  const stmt = db.prepare("SELECT * FROM ADMIN WHERE email = ?");
-  const admin = stmt.get(email);
-  return admin;
+// 3. Lấy thông tin Admin theo email
+async function getAdminByEmail(email) {
+  const res = await pool.query("SELECT * FROM ADMIN WHERE email = $1", [email]);
+  return res.rows[0];
 }
 
-// **3. Cập nhật thông tin Admin**
-function updateAdmin(email, updatedData) {
-  const stmt = db.prepare(`
-    UPDATE ADMIN 
-    SET ho_ten = ?, mat_khau = ?, sdt = ?, avt = ?
-    WHERE email = ?
-  `);
-  const result = stmt.run(updatedData.ho_ten, updatedData.mat_khau, updatedData.sdt, updatedData.avt, email);
-  return result;
+// 4. Cập nhật thông tin Admin
+async function updateAdmin(email, updatedData) {
+  const fields = [];
+  const values = [];
+  let index = 1;
+
+  for (const key in updatedData) {
+    fields.push(`"${key}" = $${index}`);
+    values.push(updatedData[key]);
+    index++;
+  }
+
+  if (fields.length === 0) {
+    throw new Error("Không có dữ liệu để cập nhật");
+  }
+
+  const query = `
+    UPDATE "ADMIN" 
+    SET ${fields.join(', ')}
+    WHERE "email" = $${index}
+    RETURNING *
+  `;
+  values.push(email);
+
+  const res = await pool.query(query, values);
+  return res.rows[0];
 }
 
-// **4. Xóa Admin**
-function deleteAdmin(email) {
-  const stmt = db.prepare("DELETE FROM ADMIN WHERE email = ?");
-  const result = stmt.run(email);
-  return result;
+// 5. Xóa Admin
+async function deleteAdmin(email) {
+  const res = await pool.query("DELETE FROM ADMIN WHERE email = $1 RETURNING *", [email]);
+  return res.rows[0];
 }
 
-function updatePassword(email, hashedPassword) {
-  const stmt = db.prepare("UPDATE ADMIN SET mat_khau = ? WHERE email = ?");
-  return stmt.run(hashedPassword, email);
+// 6. Cập nhật mật khẩu
+async function updatePassword(email, hashedPassword) {
+  const res = await pool.query("UPDATE ADMIN SET mat_khau = $1 WHERE email = $2 RETURNING *", [hashedPassword, email]);
+  return res.rows[0];
 }
 
 module.exports = {

@@ -41,8 +41,9 @@ exports.update = async (req, res) => {
   try {
     const result = await Admin.updateAdmin(email, data);
 
-    if (result.changes === 0)
+    if (!result) {
       return res.status(404).json({ message: 'Không tìm thấy Admin để cập nhật' });
+    }
 
     res.status(200).json({ message: 'Cập nhật Admin thành công', result });
   } catch (err) {
@@ -60,7 +61,7 @@ exports.remove = async (req, res) => {
   try {
     const result = await Admin.deleteAdmin(email);
 
-    if (result.changes === 0)
+    if (result.rowCount === 0)  // Cũng đổi `changes` thành `rowCount` cho PostgreSQL
       return res.status(404).json({ message: 'Không tìm thấy Admin để xóa' });
 
     res.status(200).json({ message: 'Xóa Admin thành công', result });
