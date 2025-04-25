@@ -8,7 +8,7 @@ const DayTro = require("./daytro.model");
 const Phong = require("./phong.model");
 const HoaDon = require("./hoadon.model");
 const ThongBao = require("./thongbao.model");
-const SuCo = require("./suco.model");
+const PhanAnh = require("./phananh.model");
 const GiaHan = require("./giahan.model");
 const OTP = require("./otp.model");
 
@@ -20,7 +20,7 @@ module.exports = {
   Phong,
   HoaDon,
   ThongBao,
-  SuCo,
+  PhanAnh,
   GiaHan,
   OTP,
   pool,  // Xuất pool để có thể dùng chung kết nối PostgreSQL trong các mô hình khác
