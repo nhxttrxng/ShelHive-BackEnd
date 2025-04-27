@@ -1,6 +1,7 @@
 const DayTro = require('../models/daytro.model');
+const Phong = require('../models/phong.model');
 
-// CREATE
+// CREATE DayTro + auto CREATE Phong
 exports.create = async (req, res) => {
   const { email_admin, ten_tro, dia_chi, so_phong, gia_dien, gia_nuoc } = req.body;
 
@@ -9,6 +10,7 @@ exports.create = async (req, res) => {
   }
 
   try {
+    // 1. Tạo dãy trọ
     const newDayTro = await DayTro.createDayTro({
       email_admin,
       ten_tro,
@@ -18,12 +20,35 @@ exports.create = async (req, res) => {
       gia_nuoc
     });
 
-    res.status(201).json({ message: 'Tạo mới thành công', newDayTro });
+    const ma_day = newDayTro.ma_day;
+
+    // 2. Tạo phòng cho dãy trọ
+    const phongPromises = [];
+    for (let i = 1; i <= so_phong; i++) {
+      const maPhong = ma_day.toString().padStart(4, '0') + i.toString().padStart(3, '0');
+
+      const phongData = {
+        ma_phong: maPhong,
+        ma_day: ma_day,
+        // các field còn lại lấy mặc định trong createPhong
+      };
+
+      phongPromises.push(Phong.createPhong(phongData));
+    }
+
+    const createdPhongs = await Promise.all(phongPromises);
+
+    res.status(201).json({
+      message: 'Tạo dãy trọ và các phòng thành công',
+      newDayTro,
+      createdPhongs
+    });
   } catch (err) {
-    console.error('Lỗi khi tạo phòng trọ:', err);
+    console.error('Lỗi khi tạo dãy trọ và phòng:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
 
 // GET ALL
 exports.getAll = async (req, res) => {

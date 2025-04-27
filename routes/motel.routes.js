@@ -3,7 +3,7 @@ const router = express.Router();
 const motel = require('../controllers/motel.controller');
 
 // CRUD Routes for Day Tro
-router.post('/create', motel.create);
+router.post('/', motel.create);
 router.get('/', motel.getAll);
 router.get('/:email_admin', motel.getByEmailAdmin);
 router.put('/:ma_day', motel.update);
