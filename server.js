@@ -29,8 +29,8 @@ app.use("/api/motels", motelRoutes);
 //app.use("/api/stats", statRoutes); // Tạo route cho API lấy thống kê
 app.use("/api/rooms", roomRoutes); // Tạo route cho API lấy phòng
 //app.use("/api/invoices", invoiceRoutes); // Tạo route cho API lấy hóa đơn
-//app.use("/api/notifications", notificationRoutes); // Tạo route cho API lấy thông báo
-//app.use("/api/reports", reportRoutes); // Tạo route cho API lấy báo cáo
+app.use("/api/notifications", notificationRoutes); // Tạo route cho API lấy thông báo
+app.use("/api/reports", reportRoutes); // Tạo route cho API lấy báo cáo
 app.use("/api/otps", otpRoutes);
 
 // Port từ file .env hoặc mặc định là 3000
