@@ -90,11 +90,32 @@ exports.forgotPassword = async (req, res) => {
     });
 
     const mailOptions = {
-      from: process.env.MAIL_USER,
+      from: `"ShelBee 🐝" <${process.env.MAIL_USER}>`,
       to: email,
-      subject: 'Mã xác thực OTP',
-      text: `Mã OTP của bạn là: ${otp}. Mã sẽ hết hạn sau 5 phút.`
+      subject: '🐝 ShelBee - Mã OTP Đổi Mật Khẩu',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #fffbee; border: 1px solid #ffcc00; border-radius: 10px;">
+          <h2 style="color: #ff9900;">Xin chào từ ShelBee! 🐝</h2>
+          <p style="font-size: 16px; color: #333;">
+            Bạn vừa yêu cầu đổi mật khẩu cho tài khoản của mình. 
+            Đây là mã OTP xác thực để hoàn tất quá trình đổi mật khẩu:
+          </p>
+          <div style="font-size: 28px; font-weight: bold; color: #ff6600; margin: 20px 0;">${otp}</div>
+          <p style="font-size: 14px; color: #666;">
+            Mã OTP sẽ <strong>hết hạn sau 5 phút</strong> vì lý do bảo mật. 
+            Vui lòng không chia sẻ mã này với bất kỳ ai nhé!
+          </p>
+          <p style="margin-top: 30px; font-size: 14px; color: #999;">
+            Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này hoặc liên hệ ngay với đội ShelHive để được hỗ trợ.
+          </p>
+          <p style="margin-top: 20px; font-size: 14px; color: #666;">
+            Thân ái,<br/>
+            <strong>ShelBee - Chú ong đồng hành cùng bạn 🐝</strong>
+          </p>
+        </div>
+      `
     };
+    
 
     await transporter.sendMail(mailOptions);
 

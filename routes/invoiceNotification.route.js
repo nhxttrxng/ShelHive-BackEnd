@@ -1,7 +1,7 @@
-const express = require('express');
+/* const express = require('express');
 const router = express.Router();
 const invoiceNotificationController = require('../controllers/invoiceNotification.controller');
-const { verifyToken, checkRole } = require('../middlewares/auth.middleware');
+const { verifyToken, checkRole } = require('../middleware/auth.middleware');
 
 // Lấy tất cả thông báo hóa đơn - Chỉ admin có quyền
 router.get('/', verifyToken, checkRole(['admin']), invoiceNotificationController.getAllNotifications);
@@ -30,4 +30,4 @@ router.put('/:id', verifyToken, checkRole(['admin', 'chu_tro']), invoiceNotifica
 // Xóa thông báo hóa đơn
 router.delete('/:id', verifyToken, checkRole(['admin', 'chu_tro']), invoiceNotificationController.deleteNotification);
 
-module.exports = router; 
+module.exports = router; */
