@@ -30,7 +30,7 @@ exports.register = async (req, res) => {
     await User.addUser({ email, ho_ten, sdt, mat_khau: hash, is_verified: false });
 
     // Tạo token xác thực
-    const token = jwt.sign({ email }, process.env.SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     // Gửi email xác thực
     const transporter = nodemailer.createTransport({
