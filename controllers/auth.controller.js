@@ -12,6 +12,11 @@ exports.register = async (req, res) => {
   if (!email || !ho_ten || !sdt || !mat_khau)
     return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
 
+  // Regex kiểm tra định dạng email đơn giản
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email))
+    return res.status(400).json({ message: 'Email không hợp lệ' });
+
   try {
     const existingAdmin = await Admin.getAdminByEmail(email);
     const existingUser = await User.getUserByEmail(email);
@@ -20,18 +25,126 @@ exports.register = async (req, res) => {
       return res.status(409).json({ message: 'Email đã được đăng ký' });
 
     const hash = await bcrypt.hash(mat_khau, 10);
-    await User.addUser({ email, ho_ten, sdt, mat_khau: hash });
+    
+    // Thêm user với trạng thái chưa xác thực
+    await User.addUser({ email, ho_ten, sdt, mat_khau: hash, is_verified: false });
 
-    res.status(201).json({ message: 'Đăng ký thành công' });
+    // Tạo token xác thực
+    const token = jwt.sign({ email }, process.env.SECRET_KEY, { expiresIn: '1h' });
+
+    // Gửi email xác thực
+    const transporter = nodemailer.createTransport({
+      service: 'gmail', // hoặc SMTP khác
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    const verifyLink = `https://shelhive-backend.onrender.com/api/verify?token=${token}`;
+
+    const mailOptions = {
+      from: `"ShelBee 🐝" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: '🐝 ShelBee - Xác Thực Tài Khoản Của Bạn',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #fffbee; border: 1px solid #ffcc00; border-radius: 10px;">
+          <h2 style="color: #ff9900;">Chào ${ho_ten}! 🐝</h2>
+          <p style="font-size: 16px; color: #333;">
+            Cảm ơn bạn đã đăng ký tài khoản với ShelHive! 
+            Hãy xác thực tài khoản của bạn bằng cách nhấn vào liên kết dưới đây:
+          </p>
+          <div style="margin: 20px 0;">
+            <a href="${verifyLink}" style="display: inline-block; background-color: #ffcc00; color: #333; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+              Xác Thực Tài Khoản
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #666;">
+            Liên kết này sẽ hết hạn sau <strong>1 giờ</strong>. Nếu liên kết không hoạt động, bạn cũng có thể sao chép và dán link sau vào trình duyệt:
+          </p>
+          <p style="word-break: break-all; color: #0066cc;">${verifyLink}</p>
+          <p style="margin-top: 30px; font-size: 14px; color: #999;">
+            Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.<br/>
+            <strong>ShelBee - Chú ong đồng hành cùng bạn 🐝</strong>
+          </p>
+        </div>
+      `
+    };
+    
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(201).json({ message: 'Đăng ký thành công, vui lòng kiểm tra email để xác thực.' });
   } catch (err) {
     console.error('Lỗi khi đăng ký:', err);
     return res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
 
+// Xác thực mail
+exports.verifyEmail = async (req, res) => {
+  const { token } = req.query;
+
+  if (!token)
+    return res.status(400).json({ message: 'Thiếu token xác thực' });
+
+  try {
+    // Giải mã token
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const email = decoded.email;
+
+    // Kiểm tra user có tồn tại không
+    const user = await User.getUserByEmail(email);
+    if (!user)
+      return res.status(404).json({ message: 'Người dùng không tồn tại' });
+
+    // Nếu đã xác thực rồi thì báo luôn
+    if (user.is_verified)
+      return res.status(400).json({ message: 'Tài khoản đã xác thực trước đó rồi' });
+
+    // Cập nhật trạng thái xác thực
+    await User.updateUser(email, { is_verified: true });
+
+    res.status(200).json({ message: 'Xác thực tài khoản thành công. Bạn có thể đăng nhập!' });
+  } catch (err) {
+    console.error('Lỗi xác thực email:', err);
+    if (err.name === 'TokenExpiredError') {
+      return res.status(400).json({ message: 'Token đã hết hạn, vui lòng đăng ký lại.' });
+    }
+    return res.status(400).json({ message: 'Token không hợp lệ.' });
+  }
+};
+
+// Kiểm tra xác thực email
+exports.checkVerify = async (req, res) => {
+  const { email } = req.query;
+
+  if (!email) {
+    return res.status(400).json({ message: 'Thiếu email' });
+  }
+
+  try {
+    const user = await User.getUserByEmail(email);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    if (user.is_verified) {
+      return res.status(200).json({ verified: true });
+    } else {
+      return res.status(200).json({ verified: false });
+    }
+  } catch (err) {
+    console.error('Lỗi khi kiểm tra xác thực:', err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
 // Đăng nhập
 exports.login = async (req, res) => {
   const { email, mat_khau } = req.body;
+  
   if (!email || !mat_khau)
     return res.status(400).json({ message: 'Thiếu thông tin' });
 
@@ -42,6 +155,11 @@ exports.login = async (req, res) => {
     if (!user) {
       user = await User.getUserByEmail(email);
       role = 'user';
+      
+      // Nếu là user thì kiểm tra xác thực email
+      if (user && !user.is_verified) {
+        return res.status(403).json({ message: 'Vui lòng xác thực email trước khi đăng nhập' });
+      }
     }
 
     if (!user)
@@ -53,8 +171,9 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign({ email, role }, process.env.JWT_SECRET, { expiresIn: '2h' });
     res.status(200).json({ token, role });
+    
   } catch (err) {
-    console.error(err);
+    console.error('Lỗi khi đăng nhập:', err);
     res.status(500).json({ message: 'Lỗi server' });
   }
 };

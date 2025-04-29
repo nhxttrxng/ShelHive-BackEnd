@@ -1,4 +1,4 @@
-// invoice.routes.js
+/* invoice.routes.js
 const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoice.controller');
@@ -52,4 +52,4 @@ router.patch('/:id/approve-extension', verifyToken, verifyAdmin, invoiceControll
 // Xóa hóa đơn (chỉ admin)
 router.delete('/:id', verifyToken, verifyAdmin, invoiceController.deleteInvoice);
 
-module.exports = router;
+module.exports = router; */

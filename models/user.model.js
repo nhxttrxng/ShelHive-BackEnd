@@ -9,21 +9,22 @@ async function getAllUsers() {
 // 2. Thêm mới một User
 async function addUser(user) {
   const query = `
-    INSERT INTO "USER" ("email", "ho_ten", "dia_chi", "gioi_tinh", "que_quan", "mat_khau", "sdt", "cccd", "ngay_sinh", "avt")
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    INSERT INTO "USER" ("email", "ho_ten", "dia_chi", "gioi_tinh", "que_quan", "mat_khau", "sdt", "cccd", "ngay_sinh", "avt", "is_verified")
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *
   `;
   const values = [
     user.email,
     user.ho_ten,
-    user.dia_chi,
-    user.gioi_tinh,
-    user.que_quan,
+    user.dia_chi || null,
+    user.gioi_tinh || null,
+    user.que_quan || null,
     user.mat_khau,
     user.sdt,
-    user.cccd,
-    user.ngay_sinh,
-    user.avt,
+    user.cccd || null,
+    user.ngay_sinh || null,
+    user.avt || null,
+    user.is_verified ?? false // <-- mặc định chưa xác thực
   ];
   const res = await pool.query(query, values);
   return res.rows[0];
@@ -35,7 +36,7 @@ async function getUserByEmail(email) {
   return res.rows[0];
 }
 
-// 4. Cập nhật thông tin User
+// 4. Cập nhật thông tin User (dùng để xác thực email hoặc sửa info)
 async function updateUser(email, updatedData) {
   const fields = [];
   const values = [];
@@ -69,7 +70,7 @@ async function deleteUser(email) {
   return res.rows[0];
 }
 
-// 6. Cập nhật mật khẩu
+// 6. Cập nhật mật khẩu riêng
 async function updatePassword(email, hashedPassword) {
   const res = await pool.query('UPDATE "USER" SET "mat_khau" = $1 WHERE "email" = $2 RETURNING *', [hashedPassword, email]);
   return res.rows[0];
