@@ -36,15 +36,15 @@ exports.register = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: 'gmail', // hoặc SMTP khác
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
       }
     });
 
     const verifyLink = `https://shelhive-backend.onrender.com/api/verify?token=${token}`;
 
     const mailOptions = {
-      from: `"ShelBee 🐝" <${process.env.EMAIL_USER}>`,
+      from: `"ShelBee 🐝" <${process.env.MAIL_USER}>`,
       to: email,
       subject: '🐝 ShelBee - Xác Thực Tài Khoản Của Bạn',
       html: `
@@ -90,7 +90,7 @@ exports.verifyEmail = async (req, res) => {
 
   try {
     // Giải mã token
-    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const email = decoded.email;
 
     // Kiểm tra user có tồn tại không
