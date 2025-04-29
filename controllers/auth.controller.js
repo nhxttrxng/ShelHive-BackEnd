@@ -41,7 +41,7 @@ exports.register = async (req, res) => {
       }
     });
 
-    const verifyLink = `https://shelhive-backend.onrender.com/api/verify?token=${token}`;
+    const verifyLink = `https://shelhive-backend.onrender.com/api/auth/verify?token=${token}`;
 
     const mailOptions = {
       from: `"ShelBee 🐝" <${process.env.MAIL_USER}>`,
@@ -85,35 +85,115 @@ exports.register = async (req, res) => {
 exports.verifyEmail = async (req, res) => {
   const { token } = req.query;
 
-  if (!token)
-    return res.status(400).json({ message: 'Thiếu token xác thực' });
+  if (!token) {
+    return res.status(400).send(renderHTML('Thiếu token xác thực', false));
+  }
 
   try {
-    // Giải mã token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const email = decoded.email;
 
-    // Kiểm tra user có tồn tại không
     const user = await User.getUserByEmail(email);
-    if (!user)
-      return res.status(404).json({ message: 'Người dùng không tồn tại' });
+    if (!user) {
+      return res.status(404).send(renderHTML('Người dùng không tồn tại', false));
+    }
 
-    // Nếu đã xác thực rồi thì báo luôn
-    if (user.is_verified)
-      return res.status(400).json({ message: 'Tài khoản đã xác thực trước đó rồi' });
+    if (user.is_verified) {
+      return res.status(400).send(renderHTML('Tài khoản đã xác thực trước đó rồi', false));
+    }
 
-    // Cập nhật trạng thái xác thực
     await User.updateUser(email, { is_verified: true });
 
-    res.status(200).json({ message: 'Xác thực tài khoản thành công. Bạn có thể đăng nhập!' });
+    res.status(200).send(renderHTML('🎉 Xác thực tài khoản thành công! Bạn có thể đăng nhập.', true));
   } catch (err) {
     console.error('Lỗi xác thực email:', err);
     if (err.name === 'TokenExpiredError') {
-      return res.status(400).json({ message: 'Token đã hết hạn, vui lòng đăng ký lại.' });
+      return res.status(400).send(renderHTML('Token đã hết hạn, vui lòng đăng ký lại.', false));
     }
-    return res.status(400).json({ message: 'Token không hợp lệ.' });
+    return res.status(400).send(renderHTML('Token không hợp lệ.', false));
   }
 };
+
+function renderHTML(message, success) {
+  return `
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+      <meta charset="UTF-8">
+      <title>${success ? 'Thành Công' : 'Thất Bại'}</title>
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          background: ${success ? '#e0ffe0' : '#ffe0e0'};
+          font-family: 'Poppins', sans-serif;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          text-align: center;
+        }
+        h1 {
+          color: ${success ? '#28a745' : '#dc3545'};
+          font-size: 2.5rem;
+          margin-bottom: 1rem;
+        }
+        p {
+          margin-top: 0.5rem;
+          font-size: 1.2rem;
+          color: #555;
+        }
+        .bee {
+          width: 50px;
+          height: 50px;
+          background: url('https://upload.wikimedia.org/wikipedia/commons/6/6b/Emoji_u1f41d.svg') no-repeat center/contain;
+          position: absolute;
+          top: 10%;
+          animation: fly 10s linear infinite;
+        }
+        @keyframes fly {
+          0% {
+            transform: translate(0, 0) rotate(0deg);
+          }
+          25% {
+            transform: translate(50vw, 20vh) rotate(30deg);
+          }
+          50% {
+            transform: translate(100vw, 40vh) rotate(0deg);
+          }
+          75% {
+            transform: translate(50vw, 60vh) rotate(-30deg);
+          }
+          100% {
+            transform: translate(0, 80vh) rotate(0deg);
+          }
+        }
+        .flowers {
+          position: absolute;
+          bottom: 0;
+          width: 100%;
+          height: 100px;
+          background: url('https://i.imgur.com/4NJlVQK.png') repeat-x bottom/contain;
+        }
+      </style>
+      <script>
+        setTimeout(() => {
+          window.close();
+          window.location.href = "/";
+        }, 3000);
+      </script>
+    </head>
+    <body>
+      <div class="bee"></div>
+      <h1>${message}</h1>
+      <p>Trang sẽ tự động đóng sau 3 giây...</p>
+      <div class="flowers"></div>
+    </body>
+    </html>
+  `;
+}
 
 // Kiểm tra xác thực email
 exports.checkVerify = async (req, res) => {
