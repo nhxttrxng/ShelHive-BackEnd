@@ -148,7 +148,7 @@ function renderHTML(message, success) {
         .bee {
           width: 50px;
           height: 50px;
-          background: url('https://upload.wikimedia.org/wikipedia/commons/6/6b/Emoji_u1f41d.svg') no-repeat center/contain;
+          background: url('https://images.emojiterra.com/google/android-12l/512px/1f41d.png') no-repeat center/contain;
           position: absolute;
           top: 10%;
           animation: fly 10s linear infinite;
@@ -175,7 +175,7 @@ function renderHTML(message, success) {
           bottom: 0;
           width: 100%;
           height: 100px;
-          background: url('https://i.imgur.com/4NJlVQK.png') repeat-x bottom/contain;
+          background: url('https://images.emojiterra.com/google/noto-emoji/unicode-15/color/512px/1f33c.png') repeat-x bottom/contain;
         }
       </style>
       <script>
