@@ -182,13 +182,13 @@ function renderHTML(message, success) {
         setTimeout(() => {
           window.close();
           window.location.href = "/";
-        }, 3000);
+        }, 10000);
       </script>
     </head>
     <body>
       <div class="bee"></div>
       <h1>${message}</h1>
-      <p>Trang sẽ tự động đóng sau 3 giây...</p>
+      <p>Trang sẽ tự động đóng sau 10 giây...</p>
       <div class="flowers"></div>
     </body>
     </html>
