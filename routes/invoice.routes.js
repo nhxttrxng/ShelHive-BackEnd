@@ -2,54 +2,55 @@
 const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoice.controller');
-const { verifyToken, verifyAdmin } = require('../middleware/auth.middleware');
+// Tạm bỏ middleware
+// const { verifyToken, isAdmin } = require('../middlewares/auth.middleware');
 
-// Lấy tất cả hóa đơn (chỉ admin)
-router.get('/', verifyToken, verifyAdmin, invoiceController.getAllInvoices);
+// Lấy tất cả hóa đơn 
+router.get('/', invoiceController.getAllInvoices);
 
-// Lấy thống kê hóa đơn theo tháng (chỉ admin)
-router.get('/stats', verifyToken, verifyAdmin, invoiceController.getMonthlyStats);
+// Lấy thống kê hóa đơn theo tháng 
+router.get('/stats', invoiceController.getMonthlyStats);
 
-// Lấy thống kê chi tiết hóa đơn theo tháng (chỉ admin)
-router.get('/detailed-stats/:year/:month', verifyToken, verifyAdmin, invoiceController.getDetailedMonthlyStats);
+// Lấy thống kê chi tiết hóa đơn theo tháng 
+router.get('/detailed-stats/:year/:month', invoiceController.getDetailedMonthlyStats);
 
 // Tính toán hóa đơn dựa trên chỉ số điện nước (không tạo hóa đơn thật)
-router.post('/calculate', verifyToken, verifyAdmin, invoiceController.calculateInvoice);
+router.post('/calculate', invoiceController.calculateInvoice);
 
 // Tạo hóa đơn tự động từ chỉ số điện nước
-router.post('/automatic', verifyToken, verifyAdmin, invoiceController.createAutomaticInvoice);
+router.post('/automatic', invoiceController.createAutomaticInvoice);
 
 // Lấy hóa đơn theo dãy trọ
-router.get('/motel/:motelId', verifyToken, invoiceController.getInvoicesByMotel);
+router.get('/motel/:motelId', invoiceController.getInvoicesByMotel);
 
 // Lấy hóa đơn chưa thanh toán theo dãy trọ
-router.get('/motel/:motelId/unpaid', verifyToken, invoiceController.getUnpaidInvoicesByMotel);
+router.get('/motel/:motelId/unpaid', invoiceController.getUnpaidInvoicesByMotel);
 
 // Lấy hóa đơn theo phòng
-router.get('/room/:roomId', verifyToken, invoiceController.getInvoicesByRoom);
+router.get('/room/:roomId', invoiceController.getInvoicesByRoom);
 
 // Lấy hóa đơn chưa thanh toán theo phòng
-router.get('/room/:roomId/unpaid', verifyToken, invoiceController.getUnpaidInvoicesByRoom);
+router.get('/room/:roomId/unpaid', invoiceController.getUnpaidInvoicesByRoom);
 
 // Lấy hóa đơn theo ID
-router.get('/:id', verifyToken, invoiceController.getInvoiceById);
+router.get('/:id', invoiceController.getInvoiceById);
 
-// Tạo hóa đơn mới (chỉ admin)
-router.post('/', verifyToken, verifyAdmin, invoiceController.createInvoice);
+// Tạo hóa đơn mới
+router.post('/', invoiceController.createInvoice);
 
-// Cập nhật hóa đơn (chỉ admin)
-router.put('/:id', verifyToken, verifyAdmin, invoiceController.updateInvoice);
+// Cập nhật hóa đơn 
+router.put('/:id', invoiceController.updateInvoice);
 
-// Cập nhật trạng thái hóa đơn (chỉ admin)
-router.patch('/:id/status', verifyToken, verifyAdmin, invoiceController.updateInvoiceStatus);
+// Cập nhật trạng thái hóa đơn 
+router.patch('/:id/status', invoiceController.updateInvoiceStatus);
 
 // Yêu cầu gia hạn hóa đơn
-router.post('/:id/request-extension', verifyToken, invoiceController.requestExtension);
+router.post('/:id/request-extension', invoiceController.requestExtension);
 
-// Duyệt gia hạn hóa đơn (chỉ admin)
-router.patch('/:id/approve-extension', verifyToken, verifyAdmin, invoiceController.approveExtension);
+// Duyệt gia hạn hóa đơn 
+router.patch('/:id/approve-extension', invoiceController.approveExtension);
 
-// Xóa hóa đơn (chỉ admin)
-router.delete('/:id', verifyToken, verifyAdmin, invoiceController.deleteInvoice);
+// Xóa hóa đơn
+router.delete('/:id', invoiceController.deleteInvoice);
 
 module.exports = router;
