@@ -1,4 +1,6 @@
 const User = require('../models/user.model');
+const Phong = require('../models/phong.model');
+const DayTro = require('../models/daytro.model');
 
 // Lấy tất cả người dùng
 exports.getAll = async (req, res) => {
@@ -82,6 +84,49 @@ exports.getUserByEmail = async (req, res) => {
     res.status(200).json(user);
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+// Lấy thông tin đầy đủ (họ tên, mã phòng, tên trọ, địa chỉ) theo email
+exports.getFullInfoByEmail = async (req, res) => {
+  const { email } = req.params;
+  if (!email) {
+    return res.status(400).json({ message: 'Thiếu email' });
+  }
+
+  try {
+    // Lấy thông tin user
+    const user = await User.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    // Khởi tạo kết quả trả về
+    const result = {
+      ho_ten: user.ho_ten,
+      ma_phong: null,
+      ten_tro: null,
+      dia_chi: null
+    };
+
+    // Lấy thông tin phòng nếu có
+    const phong = await Phong.getPhongByEmailUser(email);
+    if (phong) {
+      result.ma_phong = phong.ma_phong;
+
+      // Lấy thông tin nhà trọ nếu có
+      const dayTro = await DayTro.getDayTroByMaDay(phong.ma_day);
+      if (dayTro) {
+        result.ten_tro = dayTro.ten_tro;
+        result.dia_chi = dayTro.dia_chi;
+      }
+    }
+
+    // Trả về kết quả thông tin đầy đủ
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Lỗi khi lấy thông tin đầy đủ:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };

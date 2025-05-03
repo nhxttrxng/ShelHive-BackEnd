@@ -38,6 +38,12 @@ async function getPhongByMaPhong(ma_phong) {
   return res.rows[0];
 }
 
+// GET BY email_user
+async function getPhongByEmailUser(email_user) {
+  const res = await pool.query(`SELECT * FROM phong WHERE email_user = $1`, [email_user]);
+  return res.rows[0];
+}
+
 // UPDATE
 async function updatePhong(ma_phong, updatedData) {
   const fields = [];
@@ -97,5 +103,6 @@ module.exports = {
   updatePhong,
   deletePhong,
   getUserInPhong,
-  getThanhVienTrongPhong
+  getThanhVienTrongPhong,
+  getPhongByEmailUser
 };

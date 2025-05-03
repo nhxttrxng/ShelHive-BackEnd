@@ -17,4 +17,6 @@ router.delete('/:email', user.remove);
 // Lấy thông tin người dùng theo email
 router.get('/:email', user.getUserByEmail);
 
+router.get('/phong/:email', user.getFullInfoByEmail);
+
 module.exports = router;
