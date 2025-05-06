@@ -27,7 +27,7 @@ exports.register = async (req, res) => {
     const hash = await bcrypt.hash(mat_khau, 10);
     
     // Thêm user với trạng thái chưa xác thực
-    await User.addUser({ email, ho_ten, sdt, mat_khau: hash, is_verified: false });
+    await User.addUser({ email, ho_ten, sdt, mat_khau: hash, is_verified: false, avt: '/uploads/default-avatar.png' });
 
     // Tạo token xác thực
     const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });

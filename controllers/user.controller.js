@@ -1,6 +1,7 @@
 const User = require('../models/user.model');
 const Phong = require('../models/phong.model');
 const DayTro = require('../models/daytro.model');
+const bcrypt = require('bcrypt');
 
 // Lấy tất cả người dùng
 exports.getAll = async (req, res) => {
@@ -25,7 +26,17 @@ exports.create = async (req, res) => {
     if (existingUser)
       return res.status(409).json({ message: 'Email đã tồn tại' });
 
-    await User.addUser({ email, ho_ten, sdt, mat_khau });
+    const hash = await bcrypt.hash(mat_khau, 10); // 🔐 Băm mật khẩu
+
+    await User.addUser({
+      email,
+      ho_ten,
+      sdt,
+      mat_khau: hash,
+      avt: '/uploads/default-avatar.png', // 🖼️ Gán avt mặc định
+      is_verified: false
+    });
+
     res.status(201).json({ message: 'Tạo người dùng thành công' });
   } catch (err) {
     console.error('Lỗi khi tạo người dùng:', err);
@@ -128,5 +139,21 @@ exports.getFullInfoByEmail = async (req, res) => {
   } catch (err) {
     console.error('Lỗi khi lấy thông tin đầy đủ:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+exports.uploadAvatar = async (req, res) => {
+  const email = req.params.email;
+  const file = req.file;
+
+  if (!file) return res.status(400).json({ message: 'Không có file nào được tải lên' });
+
+  const filePath = `/uploads/${file.filename}`;
+  try {
+    await User.updateAvatar(email, filePath);
+    res.status(200).json({ message: 'Cập nhật ảnh đại diện thành công', path: filePath });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi cơ sở dữ liệu' });
   }
 };

@@ -76,6 +76,12 @@ async function updatePassword(email, hashedPassword) {
   return res.rows[0];
 }
 
+const updateAvatar = async (email, filePath) => {
+  const query = 'UPDATE "USER" SET avt = $1 WHERE email = $2';
+  const values = [filePath, email];
+  await pool.query(query, values);
+};
+
 module.exports = {
   getAllUsers,
   addUser,
@@ -83,4 +89,5 @@ module.exports = {
   updateUser,
   deleteUser,
   updatePassword,
+  updateAvatar
 };

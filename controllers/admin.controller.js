@@ -1,4 +1,5 @@
 const Admin = require('../models/admin.model');
+const bcrypt = require('bcrypt');
 
 // Lấy tất cả Admin
 exports.getAll = async (req, res) => {
@@ -11,11 +12,10 @@ exports.getAll = async (req, res) => {
   }
 };
 
-// Tạo Admin mới
 exports.create = async (req, res) => {
-  const { email, ho_ten, sdt, mat_khau, avt } = req.body;
+  const { email, ho_ten, sdt, mat_khau } = req.body;
 
-  if (!email || !ho_ten || !sdt || !mat_khau || !avt)
+  if (!email || !ho_ten || !sdt || !mat_khau)
     return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
 
   try {
@@ -23,7 +23,16 @@ exports.create = async (req, res) => {
     if (existingAdmin)
       return res.status(409).json({ message: 'Email đã tồn tại' });
 
-    await Admin.addAdmin({ email, ho_ten, sdt, mat_khau, avt });
+    const hash = await bcrypt.hash(mat_khau, 10); // 🔒 Băm mật khẩu
+
+    await Admin.addAdmin({
+      email,
+      ho_ten,
+      sdt,
+      mat_khau: hash,
+      avt: '/uploads/default-avatar.png' 
+    });
+
     res.status(201).json({ message: 'Tạo Admin thành công' });
   } catch (err) {
     console.error('Lỗi khi tạo Admin:', err);
@@ -84,5 +93,21 @@ exports.getAdminByEmail = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+exports.uploadAvatar = async (req, res) => {
+  const email = req.params.email;
+  const file = req.file;
+
+  if (!file) return res.status(400).json({ message: 'Không có file nào được tải lên' });
+
+  const filePath = `/uploads/${file.filename}`;
+  try {
+    await Admin.updateAvatar(email, filePath);
+    res.status(200).json({ message: 'Cập nhật ảnh đại diện thành công', path: filePath });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi cơ sở dữ liệu' });
   }
 };

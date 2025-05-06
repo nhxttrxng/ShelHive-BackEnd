@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const upload = require('../middleware/upload.middleware');
 const admin = require('../controllers/admin.controller');
 
 // Lấy tất cả Admin
@@ -16,5 +17,7 @@ router.put('/:email', admin.update);
 
 // Xóa Admin
 router.delete('/:email', admin.remove);
+
+router.post('/upload-avt/:email', upload.single('image'), admin.uploadAvatar);
 
 module.exports = router;

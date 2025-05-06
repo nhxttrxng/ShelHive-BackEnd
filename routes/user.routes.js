@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const upload = require('../middleware/upload.middleware');
 const user = require('../controllers/user.controller');
 
 // Lấy tất cả người dùng
@@ -18,5 +19,7 @@ router.delete('/:email', user.remove);
 router.get('/:email', user.getUserByEmail);
 
 router.get('/phong/:email', user.getFullInfoByEmail);
+
+router.post('/upload-avt/:email', upload.single('image'), user.uploadAvatar);
 
 module.exports = router;

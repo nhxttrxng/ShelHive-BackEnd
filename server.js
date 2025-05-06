@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();  // Đọc file .env
+const path = require('path');
 
 // Import các routes
 const authRoutes = require("./routes/auth.routes");
@@ -22,6 +23,7 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());  // Xử lý JSON body
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use("/api/auth", authRoutes);  // Tạo route cho các API auth
