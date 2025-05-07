@@ -116,6 +116,7 @@ exports.getFullInfoByEmail = async (req, res) => {
     // Khởi tạo kết quả trả về
     const result = {
       ho_ten: user.ho_ten,
+      avt: user.avt,
       ma_phong: null,
       ten_tro: null,
       dia_chi: null
