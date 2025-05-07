@@ -426,3 +426,9 @@ exports.resendOtp = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
+exports.logout = async (req, res) => {
+  const { email } = req.body;
+  console.log(`Người dùng ${email} đã logout`);
+  return res.status(200).json({ message: 'Đăng xuất thành công' });
+};

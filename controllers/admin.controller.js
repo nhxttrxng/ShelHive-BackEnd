@@ -1,4 +1,5 @@
 const Admin = require('../models/admin.model');
+const DayTro = require('../models/daytro.model');
 const bcrypt = require('bcrypt');
 
 // Lấy tất cả Admin
