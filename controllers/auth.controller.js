@@ -399,8 +399,15 @@ exports.resendOtp = async (req, res) => {
     // Tạo OTP mới
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = Math.floor(Date.now() / 1000) + 300;
+    console.log('Gửi OTP cho:', email, otp, expires, user ? 'user' : 'admin');
 
-    await OTP.addOTP(email, otp, expires, user ? 'user' : 'admin');
+
+    await OTP.addOTP({
+      email,
+      otp,
+      expiration_time: expires,
+      role: user ? 'user' : 'admin'
+    });
 
     // Gửi mail
     const transporter = nodemailer.createTransport({
