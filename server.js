@@ -9,7 +9,7 @@ const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
 const adminRoutes = require("./routes/admin.routes");
 const motelRoutes = require("./routes/motel.routes");
-//const statRoutes = require("./routes/stat.routes");
+const statRoutes = require("./routes/stat.routes");
 const roomRoutes = require("./routes/room.routes");
 const invoiceRoutes = require("./routes/invoice.routes");
 const extensionRoutes = require("./routes/extension.routes");
@@ -30,7 +30,7 @@ app.use("/api/auth", authRoutes);  // Tạo route cho các API auth
 app.use("/api/users", userRoutes); // Tạo route cho API lấy người dùng
 app.use("/api/admins", adminRoutes); // Tạo route cho API lấy admin
 app.use("/api/motels", motelRoutes);
-//app.use("/api/stats", statRoutes); // Tạo route cho API lấy thống kê
+app.use("/api/stats", statRoutes); // Tạo route cho API lấy thống kê
 app.use("/api/rooms", roomRoutes); // Tạo route cho API lấy phòng
 app.use("/api/invoices", invoiceRoutes); // Tạo route cho API lấy hóa đơn
 app.use("/api/extensions", extensionRoutes); // Tạo route cho API gia hạn hóa đơn

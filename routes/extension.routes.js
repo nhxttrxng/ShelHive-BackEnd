@@ -1,36 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const extensionController = require('../controllers/extension.controller');
-const { verifyToken, verifyAdmin } = require('../middleware/auth.middleware');
 
-// Lấy tất cả yêu cầu gia hạn (chỉ admin)
-router.get('/', verifyToken, verifyAdmin, extensionController.getAllExtensions);
+// Lấy tất cả yêu cầu gia hạn 
+router.get('/', extensionController.getAllExtensions);
 
 // Lấy yêu cầu gia hạn theo mã gia hạn
-router.get('/:id', verifyToken, extensionController.getExtensionById);
+router.get('/:id', extensionController.getExtensionById);
 
 // Lấy yêu cầu gia hạn theo mã hóa đơn
-router.get('/invoice/:invoiceId', verifyToken, extensionController.getExtensionsByInvoiceId);
+router.get('/invoice/:invoiceId', extensionController.getExtensionsByInvoiceId);
 
 // Lấy lịch sử gia hạn của hóa đơn
-router.get('/invoice/:invoiceId/history', verifyToken, extensionController.getExtensionHistoryByInvoice);
+router.get('/invoice/:invoiceId/history', extensionController.getExtensionHistoryByInvoice);
 
 // Tính toán tiền lãi dự kiến
-router.post('/calculate', verifyToken, extensionController.calculateExpectedInterest);
+router.post('/calculate', extensionController.calculateExpectedInterest);
 
 // Tạo yêu cầu gia hạn mới
-router.post('/', verifyToken, extensionController.createExtension);
+router.post('/', extensionController.createExtension);
 
 // Cập nhật yêu cầu gia hạn
-router.put('/:id', verifyToken, extensionController.updateExtension);
+router.put('/:id', extensionController.updateExtension);
 
-// Duyệt yêu cầu gia hạn (chỉ admin)
-router.patch('/:id/approve', verifyToken, verifyAdmin, extensionController.approveExtension);
+// Duyệt yêu cầu gia hạn 
+router.patch('/:id/approve', extensionController.approveExtension);
 
-// Từ chối yêu cầu gia hạn (chỉ admin)
-router.patch('/:id/reject', verifyToken, verifyAdmin, extensionController.rejectExtension);
+// Từ chối yêu cầu gia hạn 
+router.patch('/:id/reject', extensionController.rejectExtension);
 
 // Xóa yêu cầu gia hạn
-router.delete('/:id', verifyToken, extensionController.deleteExtension);
+router.delete('/:id', extensionController.deleteExtension);
 
 module.exports = router; 

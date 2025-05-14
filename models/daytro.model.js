@@ -25,6 +25,13 @@ async function getAllDayTro() {
   return res.rows;
 }
 
+// GET BY ID
+async function getDayTroByMaDay(ma_day) {
+  const query = `SELECT * FROM day_tro WHERE ma_day = $1`;
+  const res = await pool.query(query, [ma_day]);
+  return res.rows[0];
+}
+
 // GET BY email_admin
 async function getDayTroByEmailAdmin(email_admin) {
   const query = `SELECT * FROM day_tro WHERE email_admin = $1`;
@@ -122,6 +129,7 @@ async function deleteDayTro(ma_day) {
 module.exports = {
   createDayTro,
   getAllDayTro,
+  getDayTroByMaDay,
   getDayTroByEmailAdmin,
   updateDayTro,
   deleteDayTro,
