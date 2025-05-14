@@ -83,7 +83,7 @@ async function deletePhong(ma_phong) {
 
     for (const ma_hoa_don of maHoaDons) {
       // Xoá gia hạn hóa đơn liên quan
-      await client.query(`DELETE FROM gia_han_hoa_don WHERE ma_hoa_don = $1`, [ma_hoa_don]);
+      await client.query(`DELETE FROM gia_han WHERE ma_hoa_don = $1`, [ma_hoa_don]);
 
       // Xoá thông báo hóa đơn liên quan
       await client.query(`DELETE FROM thong_bao_hoa_don WHERE ma_hoa_don = $1`, [ma_hoa_don]);

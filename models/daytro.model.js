@@ -93,7 +93,7 @@ async function deleteDayTro(ma_day) {
 
       for (const ma_hoa_don of maHoaDons) {
         // Xoá gia hạn hoá đơn
-        await client.query(`DELETE FROM gia_han_hoa_don WHERE ma_hoa_don = $1`, [ma_hoa_don]);
+        await client.query(`DELETE FROM gia_han WHERE ma_hoa_don = $1`, [ma_hoa_don]);
 
         // Xoá thông báo hoá đơn
         await client.query(`DELETE FROM thong_bao_hoa_don WHERE ma_hoa_don = $1`, [ma_hoa_don]);
