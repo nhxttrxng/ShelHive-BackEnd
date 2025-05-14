@@ -67,8 +67,42 @@ async function updatePhong(ma_phong, updatedData) {
 
 // DELETE
 async function deletePhong(ma_phong) {
-  const res = await pool.query(`DELETE FROM phong WHERE ma_phong = $1 RETURNING *`, [ma_phong]);
-  return res.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Xoá các phản ánh liên quan tới phòng
+    await client.query(`DELETE FROM phan_anh WHERE ma_phong = $1`, [ma_phong]);
+
+    // Xoá thành viên liên quan đến phòng
+    await client.query(`DELETE FROM thanh_vien WHERE ma_phong = $1`, [ma_phong]);
+
+    // Lấy danh sách các hóa đơn cần xoá để xử lý các bảng phụ thuộc
+    const hoaDonRes = await client.query(`SELECT ma_hoa_don FROM hoa_don WHERE ma_phong = $1`, [ma_phong]);
+    const maHoaDons = hoaDonRes.rows.map(row => row.ma_hoa_don);
+
+    for (const ma_hoa_don of maHoaDons) {
+      // Xoá gia hạn hóa đơn liên quan
+      await client.query(`DELETE FROM gia_han_hoa_don WHERE ma_hoa_don = $1`, [ma_hoa_don]);
+
+      // Xoá thông báo hóa đơn liên quan
+      await client.query(`DELETE FROM thong_bao_hoa_don WHERE ma_hoa_don = $1`, [ma_hoa_don]);
+    }
+
+    // Xoá hóa đơn của phòng
+    await client.query(`DELETE FROM hoa_don WHERE ma_phong = $1`, [ma_phong]);
+
+    // Xoá phòng
+    const res = await client.query(`DELETE FROM phong WHERE ma_phong = $1 RETURNING *`, [ma_phong]);
+
+    await client.query('COMMIT');
+    return res.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // Lấy thông tin user đứng tên phòng
