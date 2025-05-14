@@ -99,9 +99,6 @@ async function deletePhong(ma_phong) {
     // Xoá các phản ánh liên quan tới phòng
     await client.query(`DELETE FROM phan_anh WHERE ma_phong = $1`, [ma_phong]);
 
-    // Xoá thành viên liên quan đến phòng
-    await client.query(`DELETE FROM thanh_vien WHERE ma_phong = $1`, [ma_phong]);
-
     // Lấy danh sách các hóa đơn cần xoá để xử lý các bảng phụ thuộc
     const hoaDonRes = await client.query(`SELECT ma_hoa_don FROM hoa_don WHERE ma_phong = $1`, [ma_phong]);
     const maHoaDons = hoaDonRes.rows.map(row => row.ma_hoa_don);

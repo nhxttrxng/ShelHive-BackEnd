@@ -81,9 +81,6 @@ async function deleteDayTro(ma_day) {
       // Xoá phản ánh
       await client.query(`DELETE FROM phan_anh WHERE ma_phong = $1`, [ma_phong]);
 
-      // Xoá thành viên
-      await client.query(`DELETE FROM thanh_vien WHERE ma_phong = $1`, [ma_phong]);
-
       // Lấy hoá đơn của phòng
       const hoaDonRes = await client.query(
         `SELECT ma_hoa_don FROM hoa_don WHERE ma_phong = $1`,
