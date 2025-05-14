@@ -2,23 +2,43 @@ const pool = require('../db/postgres');
 
 // CREATE
 async function createPhong(data) {
-  const query = `
-    INSERT INTO phong (ma_phong, ma_day, email_user, trang_thai_phong, ngay_bat_dau, ngay_ket_thuc, gia_thue)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING *
-  `;
-  const values = [
-    data.ma_phong,
-    data.ma_day,
-    data.email_user || null,
-    data.trang_thai_phong || 'Trống',
-    data.ngay_bat_dau || null,
-    data.ngay_ket_thuc || null,
-    data.gia_thue || null
-  ];
-  const res = await pool.query(query, values);
-  return res.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const insertQuery = `
+      INSERT INTO phong (ma_phong, ma_day, email_user, trang_thai_phong, ngay_bat_dau, ngay_ket_thuc, gia_thue)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `;
+    const values = [
+      data.ma_phong,
+      data.ma_day,
+      data.email_user || null,
+      data.trang_thai_phong || 'Trống',
+      data.ngay_bat_dau || null,
+      data.ngay_ket_thuc || null,
+      data.gia_thue || null
+    ];
+
+    const res = await client.query(insertQuery, values);
+
+    // Cập nhật số phòng trong bảng day_tro
+    await client.query(
+      `UPDATE day_tro SET so_phong = so_phong + 1 WHERE ma_day = $1`,
+      [data.ma_day]
+    );
+
+    await client.query('COMMIT');
+    return res.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
+
 
 // GET ALL
 async function getAllPhong() {
@@ -71,6 +91,11 @@ async function deletePhong(ma_phong) {
   try {
     await client.query('BEGIN');
 
+    // Lấy ma_day trước khi xoá phòng
+    const maDayRes = await client.query(`SELECT ma_day FROM phong WHERE ma_phong = $1`, [ma_phong]);
+    const ma_day = maDayRes.rows[0]?.ma_day;
+    if (!ma_day) throw new Error("Không tìm thấy mã dãy của phòng cần xoá");
+
     // Xoá các phản ánh liên quan tới phòng
     await client.query(`DELETE FROM phan_anh WHERE ma_phong = $1`, [ma_phong]);
 
@@ -82,10 +107,7 @@ async function deletePhong(ma_phong) {
     const maHoaDons = hoaDonRes.rows.map(row => row.ma_hoa_don);
 
     for (const ma_hoa_don of maHoaDons) {
-      // Xoá gia hạn hóa đơn liên quan
       await client.query(`DELETE FROM gia_han WHERE ma_hoa_don = $1`, [ma_hoa_don]);
-
-      // Xoá thông báo hóa đơn liên quan
       await client.query(`DELETE FROM thong_bao_hoa_don WHERE ma_hoa_don = $1`, [ma_hoa_don]);
     }
 
@@ -94,6 +116,9 @@ async function deletePhong(ma_phong) {
 
     // Xoá phòng
     const res = await client.query(`DELETE FROM phong WHERE ma_phong = $1 RETURNING *`, [ma_phong]);
+
+    // Cập nhật lại số phòng trong dãy
+    await client.query(`UPDATE day_tro SET so_phong = so_phong - 1 WHERE ma_day = $1`, [ma_day]);
 
     await client.query('COMMIT');
     return res.rows[0];
@@ -104,6 +129,7 @@ async function deletePhong(ma_phong) {
     client.release();
   }
 }
+
 
 // Lấy thông tin user đứng tên phòng
 async function getUserInPhong(ma_phong) {
