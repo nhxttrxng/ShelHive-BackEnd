@@ -1,4 +1,3 @@
-/* invoice.routes.js
 const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoice.controller');
@@ -53,4 +52,4 @@ router.patch('/:id/approve-extension', invoiceController.approveExtension);
 // Xóa hóa đơn
 router.delete('/:id', invoiceController.deleteInvoice);
 
-module.exports = router; */
+module.exports = router;
