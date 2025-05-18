@@ -19,7 +19,7 @@ exports.getByMaPhong = async (req, res) => {
 
     const user = await PhongModel.getUserInPhong(req.params.ma_phong);
 
-    res.json({ room, user, members });
+    res.json({ room, user });
   } catch (error) {
     res.status(500).json({ error: 'Lỗi khi lấy thông tin phòng' });
   }
