@@ -18,7 +18,6 @@ exports.getByMaPhong = async (req, res) => {
     if (!room) return res.status(404).json({ error: 'Không tìm thấy phòng' });
 
     const user = await PhongModel.getUserInPhong(req.params.ma_phong);
-    const members = await PhongModel.getThanhVienTrongPhong(req.params.ma_phong);
 
     res.json({ room, user, members });
   } catch (error) {
