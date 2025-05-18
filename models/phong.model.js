@@ -141,17 +141,6 @@ async function getUserInPhong(ma_phong) {
   return res.rows[0];
 }
 
-// Lấy danh sách thành viên trong phòng
-async function getThanhVienTrongPhong(ma_phong) {
-  const query = `
-    SELECT id, ho_ten, gioi_tinh, sdt, cccd, ngay_sinh, que_quan, dia_chi
-    FROM thanh_vien
-    WHERE ma_phong = $1
-  `;
-  const res = await pool.query(query, [ma_phong]);
-  return res.rows;
-}
-
 module.exports = {
   createPhong,
   getAllPhong,
@@ -160,6 +149,5 @@ module.exports = {
   updatePhong,
   deletePhong,
   getUserInPhong,
-  getThanhVienTrongPhong,
   getPhongByEmailUser
 };
