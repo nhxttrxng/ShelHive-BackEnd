@@ -47,13 +47,20 @@ exports.create = async (req, res) => {
       }
     }
 
-    // Phần da_thue sẽ tự động được handle ở tầng model
+    // Không cho FE truyền ma_phong, sẽ được tự động tạo ở tầng model
+    if (data.ma_phong) {
+      delete data.ma_phong;
+    }
+
+    // Phần da_thue và sinh ma_phong sẽ tự động được handle ở tầng model
     const newRoom = await PhongModel.createPhong(data);
     res.status(201).json(newRoom);
   } catch (error) {
+    console.error(error); // log chi tiết để debug
     res.status(500).json({ error: 'Lỗi khi tạo phòng' });
   }
 };
+
 
 // UPDATE
 exports.update = async (req, res) => {

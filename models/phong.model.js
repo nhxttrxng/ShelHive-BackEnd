@@ -6,14 +6,34 @@ async function createPhong(data) {
   try {
     await client.query('BEGIN');
 
+    // 1. Lấy danh sách mã phòng hiện tại của dãy
+    const ma_day = data.ma_day;
+    const result = await client.query(
+      "SELECT ma_phong FROM phong WHERE ma_day = $1 ORDER BY ma_phong ASC",
+      [ma_day]
+    );
+    const existingRooms = result.rows.map(row => row.ma_phong);
+
+    // 2. Tìm số thứ tự nhỏ nhất còn thiếu, nếu không thiếu thì lấy số lớn nhất + 1
+    let nextIndex = 1;
+    let usedIndexes = new Set(
+      existingRooms.map(mp => parseInt(mp.slice(-3))) // Lấy 3 số cuối
+    );
+    while (usedIndexes.has(nextIndex)) {
+      nextIndex++;
+    }
+
+    // 3. Tạo mã phòng mới: 2 chữ số mã dãy + 3 số thứ tự phòng
+    const ma_phong = `${ma_day.toString().padStart(2, '0')}${nextIndex.toString().padStart(3, '0')}`;
+
     const insertQuery = `
       INSERT INTO phong (ma_phong, ma_day, email_user, da_thue, ngay_bat_dau, ngay_ket_thuc, gia_thue)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
     const values = [
-      data.ma_phong,
-      data.ma_day,
+      ma_phong,
+      ma_day,
       data.email_user || null,
       !!data.email_user, // da_thue = true nếu có email_user, ngược lại false
       data.ngay_bat_dau || null,
@@ -23,10 +43,10 @@ async function createPhong(data) {
 
     const res = await client.query(insertQuery, values);
 
-    // Cập nhật số phòng trong bảng day_tro
+    // 4. Cập nhật số phòng trong bảng day_tro
     await client.query(
       `UPDATE day_tro SET so_phong = so_phong + 1 WHERE ma_day = $1`,
-      [data.ma_day]
+      [ma_day]
     );
 
     await client.query('COMMIT');
@@ -38,6 +58,7 @@ async function createPhong(data) {
     client.release();
   }
 }
+
 
 // GET ALL
 async function getAllPhong() {
