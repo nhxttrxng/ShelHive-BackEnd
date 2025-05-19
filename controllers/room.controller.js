@@ -18,7 +18,6 @@ exports.getByMaPhong = async (req, res) => {
     if (!room) return res.status(404).json({ error: 'Không tìm thấy phòng' });
 
     const user = await PhongModel.getUserInPhong(req.params.ma_phong);
-
     res.json({ room, user });
   } catch (error) {
     res.status(500).json({ error: 'Lỗi khi lấy thông tin phòng' });
@@ -40,6 +39,7 @@ exports.create = async (req, res) => {
   try {
     const data = req.body;
 
+    // Nếu có email_user thì phải check user tồn tại
     if (data.email_user) {
       const user = await UserModel.getUserByEmail(data.email_user);
       if (!user) {
@@ -47,6 +47,7 @@ exports.create = async (req, res) => {
       }
     }
 
+    // Phần da_thue sẽ tự động được handle ở tầng model
     const newRoom = await PhongModel.createPhong(data);
     res.status(201).json(newRoom);
   } catch (error) {
@@ -60,6 +61,7 @@ exports.update = async (req, res) => {
     const ma_phong = req.params.ma_phong;
     const data = req.body;
 
+    // Nếu có email_user thì phải check user tồn tại
     if (data.email_user) {
       const user = await UserModel.getUserByEmail(data.email_user);
       if (!user) {
@@ -67,6 +69,7 @@ exports.update = async (req, res) => {
       }
     }
 
+    // Phần da_thue sẽ tự động được handle ở tầng model
     const updatedRoom = await PhongModel.updatePhong(ma_phong, data);
     res.json(updatedRoom);
   } catch (error) {

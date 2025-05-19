@@ -7,7 +7,7 @@ async function createPhong(data) {
     await client.query('BEGIN');
 
     const insertQuery = `
-      INSERT INTO phong (ma_phong, ma_day, email_user, trang_thai_phong, ngay_bat_dau, ngay_ket_thuc, gia_thue)
+      INSERT INTO phong (ma_phong, ma_day, email_user, da_thue, ngay_bat_dau, ngay_ket_thuc, gia_thue)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
@@ -15,7 +15,7 @@ async function createPhong(data) {
       data.ma_phong,
       data.ma_day,
       data.email_user || null,
-      data.trang_thai_phong || 'Trống',
+      !!data.email_user, // da_thue = true nếu có email_user, ngược lại false
       data.ngay_bat_dau || null,
       data.ngay_ket_thuc || null,
       data.gia_thue || null
@@ -38,7 +38,6 @@ async function createPhong(data) {
     client.release();
   }
 }
-
 
 // GET ALL
 async function getAllPhong() {
@@ -66,6 +65,11 @@ async function getPhongByEmailUser(email_user) {
 
 // UPDATE
 async function updatePhong(ma_phong, updatedData) {
+  // Nếu FE truyền email_user thì tự động cập nhật da_thue theo email_user
+  if ('email_user' in updatedData) {
+    updatedData.da_thue = !!updatedData.email_user;
+  }
+
   const fields = [];
   const values = [];
   let i = 1;
@@ -126,7 +130,6 @@ async function deletePhong(ma_phong) {
     client.release();
   }
 }
-
 
 // Lấy thông tin user đứng tên phòng
 async function getUserInPhong(ma_phong) {
