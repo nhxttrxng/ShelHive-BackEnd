@@ -17,14 +17,19 @@ async function createPhong(data) {
     // 2. Tìm số thứ tự nhỏ nhất còn thiếu, nếu không thiếu thì lấy số lớn nhất + 1
     let nextIndex = 1;
     let usedIndexes = new Set(
-      existingRooms.map(mp => parseInt(mp.slice(-3))) // Lấy 3 số cuối
+      existingRooms.map(mp => {
+        // mp là string dạng "ma_day"+"xxx", cắt 3 ký tự cuối cùng
+        const mpStr = mp.toString();
+        const soThuTu = mpStr.slice(-3); // Lấy 3 số cuối
+        return parseInt(soThuTu, 10);
+      })
     );
     while (usedIndexes.has(nextIndex)) {
       nextIndex++;
     }
 
-    // 3. Tạo mã phòng mới: 2 chữ số mã dãy + 3 số thứ tự phòng
-    const ma_phong = `${ma_day.toString().padStart(2, '0')}${nextIndex.toString().padStart(3, '0')}`;
+    // 3. Tạo mã phòng mới: toàn bộ ma_day + 3 số thứ tự phòng
+    const ma_phong = `${ma_day.toString()}${nextIndex.toString().padStart(3, '0')}`;
 
     const insertQuery = `
       INSERT INTO phong (ma_phong, ma_day, email_user, da_thue, ngay_bat_dau, ngay_ket_thuc, gia_thue)
@@ -35,7 +40,7 @@ async function createPhong(data) {
       ma_phong,
       ma_day,
       data.email_user || null,
-      !!data.email_user, // da_thue = true nếu có email_user, ngược lại false
+      !!data.email_user,
       data.ngay_bat_dau || null,
       data.ngay_ket_thuc || null,
       data.gia_thue || null
