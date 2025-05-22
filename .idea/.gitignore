@@ -1,3 +1,21 @@
 # Default ignored files
 /shelf/
 /workspace.xml
+# Thư mục node_modules chứa các thư viện npm, không cần phải đẩy lên Git
+node_modules/
+
+# Các tệp cấu hình cá nhân của IDE (ví dụ: Visual Studio Code)
+.vscode/
+
+# Các tệp log
+*.log
+
+# Tệp môi trường chứa thông tin nhạy cảm
+.env
+
+# Tệp hệ thống của macOS
+.DS_Store
+
+# Tệp build 
+dist/
+build/
