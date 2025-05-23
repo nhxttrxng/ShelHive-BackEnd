@@ -1,4 +1,4 @@
-const InvoiceNotificationgi = require('../models/thongbao_hoadon.model');
+const ThongBaoHoaDon = require('../models/thongbao_hoadon.model');
 const Invoice = require('../models/hoadon.model');
 
 const invoiceNotificationController = {};

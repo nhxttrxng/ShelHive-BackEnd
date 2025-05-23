@@ -9,14 +9,9 @@ const Notification = {
   // Lấy thông báo theo mã dãy
   getByMaDay: async function(ma_day) {
     const result = await pool.query(
-      'SELECT * FROM thong_bao WHERE ma_day = $1 ORDER BY ngay_tao DESC',
+      'SELECT noi_dung FROM thong_bao WHERE ma_day = $1 ORDER BY ngay_tao DESC',
       [ma_day]
     );
-    return result.rows;
-  },
-  getByUserId: async function(user_id) {
-    const result = await pool.query(
-      'SELECT tb.* FROM thong_bao tb INNER JOIN phong p ON tb.ma_day = p.ma_day WHERE p.email_user = $1 ORDER BY tb.ngay_tao DESC', [user_id]);
     return result.rows;
   },
 
@@ -36,7 +31,15 @@ const Notification = {
   remove: async function(id) {
     const result = await pool.query('DELETE FROM thong_bao WHERE ma_thong_bao = $1', [id]);
     return result.rowCount;
-  }
+  },
+    getThongBaoByPhongId: async function(ma_phong) {
+    const result = await pool.query(
+      'SELECT tb.* FROM thong_bao tb JOIN day_tro dt ON tb.ma_day = dt.ma_day JOIN phong p ON dt.ma_day = p.ma_day WHERE p.ma_phong = $1 ORDER BY tb.ngay_tao DESC',
+      [ma_phong]
+    );
+    return result.rows;
+  },
+
 };
 
 module.exports = Notification;

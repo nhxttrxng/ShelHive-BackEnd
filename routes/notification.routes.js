@@ -8,11 +8,11 @@ router.get('/', notificationController.getAll);
 // GET theo mã dãy (URL cũ)
 router.get('/day/:ma_day', notificationController.getByMaDay);
 
-// GET theo mã dãy (URL mới)
-router.get('/motel/:ma_day', notificationController.getByMaDay);
-
-// Lấy thông báo theo user_id
-router.get('/:user_id', notificationController.getByUserId);
+// Route lấy thông báo theo mã phòng (ĐƯA LÊN TRƯỚC)
+// ...existing code...
+// Route lấy thông báo theo mã phòng (ĐƯA LÊN TRƯỚC)
+router.get('/phong/:ma_phong', notificationController.getByMaPhong);
+// ...existing code...
 
 // Tạo mới thông báo
 router.post('/', notificationController.create);
