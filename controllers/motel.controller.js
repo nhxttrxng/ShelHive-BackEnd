@@ -1,5 +1,6 @@
 const DayTro = require('../models/daytro.model');
 const Phong = require('../models/phong.model');
+const pool = require('../db/postgres');
 
 // CREATE DayTro + auto CREATE Phong
 exports.create = async (req, res) => {
@@ -9,43 +10,45 @@ exports.create = async (req, res) => {
     return res.status(400).json({ message: 'Thiếu thông tin cần thiết' });
   }
 
+  const client = await pool.connect();
   try {
-    // 1. Tạo dãy trọ
-    const newDayTro = await DayTro.createDayTro({
-      email_admin,
-      ten_tro,
-      dia_chi,
-      so_phong,
-      gia_dien,
-      gia_nuoc
-    });
+    await client.query('BEGIN');
 
-    const ma_day = newDayTro.ma_day;
+    // 1. Tạo dãy trọ (sử dụng client)
+    const insertDayTroQuery = `
+      INSERT INTO day_tro(email_admin, ten_tro, dia_chi, so_phong, gia_dien, gia_nuoc)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING ma_day;
+    `;
+    const newDayTroResult = await client.query(insertDayTroQuery, [
+      email_admin, ten_tro, dia_chi, so_phong, gia_dien, gia_nuoc
+    ]);
+    const ma_day = newDayTroResult.rows[0].ma_day;
 
-    // 2. Tạo phòng cho dãy trọ
-    const phongPromises = [];
+    // 2. Tạo các phòng
     for (let i = 1; i <= so_phong; i++) {
-      const maPhong = ma_day.toString().padStart(4, '0') + i.toString().padStart(3, '0');
+      // Ví dụ: mã phòng = ma_day * 1000 + stt (vd: ma_day=11, phòng 1: 11001)
+      // Đảm bảo mã phòng luôn unique, có thể thay logic sinh mã phù hợp thực tế.
+      const maPhong = parseInt(ma_day) * 1000 + i;
 
-      const phongData = {
-        ma_phong: maPhong,
-        ma_day: ma_day,
-        // các field còn lại lấy mặc định trong createPhong
-      };
-
-      phongPromises.push(Phong.createPhong(phongData));
+      const insertPhongQuery = `
+        INSERT INTO phong(ma_phong, ma_day)
+        VALUES ($1, $2)
+      `;
+      await client.query(insertPhongQuery, [maPhong, ma_day]);
     }
 
-    const createdPhongs = await Promise.all(phongPromises);
+    await client.query('COMMIT');
 
     res.status(201).json({
       message: 'Tạo dãy trọ và các phòng thành công',
-      newDayTro,
-      createdPhongs
+      ma_day: ma_day
     });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Lỗi khi tạo dãy trọ và phòng:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
+  } finally {
+    client.release();
   }
 };
 
