@@ -16,7 +16,7 @@ const Notification = {
   },
   getByUserId: async function(user_id) {
     const result = await pool.query(
-      'SELECT tb.* FROM thong_bao tb INNER JOIN phong p ON tb.ma_phong = p.ma_phong WHERE p.email_user = $1 ORDER BY tb.ngay_tao DESC', [user_id]);
+      'SELECT tb.* FROM thong_bao tb INNER JOIN phong p ON tb.ma_day = p.ma_day WHERE p.email_user = $1 ORDER BY tb.ngay_tao DESC', [user_id]);
     return result.rows;
   },
 
