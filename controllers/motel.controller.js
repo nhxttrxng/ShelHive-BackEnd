@@ -1,5 +1,6 @@
 const DayTro = require('../models/daytro.model');
 const Phong = require('../models/phong.model');
+const pool = require('../db/postgres');
 
 // CREATE DayTro + auto CREATE Phong
 exports.create = async (req, res) => {
