@@ -13,6 +13,6 @@ router.put('/:ma_phan_anh', PhanAnhController.updateTinhTrang);
 
 router.get('/', PhanAnhController.getAll);
 // GET /phan-anh/chua-xu-ly?ma_day=...
-// router.get('/:ma_day', PhanAnhController.getByMaDay);
+router.get('/day/:ma_day', PhanAnhController.getByMaDay);
 
 module.exports = router;

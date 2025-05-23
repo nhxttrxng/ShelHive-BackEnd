@@ -22,10 +22,10 @@ async getAll() {
   const { rows } = await pool.query(query);  // không truyền tham số
   return rows;
 },
-async getbymaday(ma_day) {
-    const query = ' SELECT * FROM phan_anh pa JOIN phong p ON pa.ma_phong = p.ma_phong WHERE p.ma_day = $1';
-      const { rows } = await pool.query(query, [ ma_day]);  // ✅ fix
-  return rows;
+async getByMaDay(ma_day) {
+    const query = 'SELECT * FROM phan_anh WHERE ma_phong IN (SELECT ma_phong FROM phong WHERE ma_day = $1);';
+    const { rows } = await pool.query(query, [ma_day]);
+    return rows;
   }
 };
 

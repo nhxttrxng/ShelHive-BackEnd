@@ -54,21 +54,23 @@ const PhanAnhController = {
       res.status(500).json({ error: 'Server error' });
     }
   }, 
-  async getByMaDay(req, res) {
-    try {
-      const { ma_day } = req.query;
 
-      if (!ma_day) {
-        return res.status(400).json({ error: 'Thiếu tham số ma_day' });
+  async getByMaDay(req, res) {
+    const maDay = req.params.ma_day;
+
+    try {
+      const danhSachPhanAnh = await PhanAnh.getByMaDay(maDay);
+
+      if (danhSachPhanAnh.length === 0) {
+        return res.status(404).json({ message: "Không tìm thấy phản ánh nào cho dãy trọ này." });
       }
 
-      const data = await PhanAnh.getbymaday(ma_day);
-      res.json(data);
-    } catch (err) {
-      console.error('Lỗi khi lấy phản ánh chưa xử lý theo mã dãy:', err);
-      res.status(500).json({ error: 'Lỗi server' });
+      res.json(danhSachPhanAnh);
+    } catch (error) {
+      console.error("Lỗi khi lấy phản ánh theo mã dãy:", error);
+      res.status(500).json({ message: "Đã xảy ra lỗi server." });
     }
-  },
+  }
 };
 
 module.exports = PhanAnhController;
