@@ -1,18 +1,21 @@
-// stat.routes.js
+// stat.route.js
 const express = require('express');
 const router = express.Router();
-const statController = require('../controllers/stat.controller');
+const StatController = require('../controllers/stat.controller');
 
-// Thống kê tiền trọ (đã thanh toán, còn nợ)
-router.get('/payment/:ma_day/:thang', statController.getPaymentStats);
+// GET: Tổng tiền trọ
+router.get('/total-rent', StatController.getTotalRent);
 
-// Thống kê lợi nhuận điện nước
-router.get('/utility-profit/:ma_day/:thang', statController.getUtilityProfitStats);
+// GET: Trạng thái thanh toán phòng
+router.get('/room-payment-status', StatController.getRoomPaymentStatus);
 
-// Thống kê lịch sử sử dụng điện nước theo phòng
-router.get('/utility-history/:ma_phong/:tu_thang/:den_thang', statController.getRoomUtilityHistory);
+// GET: Doanh thu chênh lệch tiền điện/nước
+router.get('/electric-water-difference', StatController.getElectricWaterRevenueDifference);
 
-// Thống kê định kỳ (tháng, quý, năm)
-router.get('/periodic/:ma_day/:tu_thang/:den_thang/:loai_thong_ke', statController.getPeriodicStats);
+// GET: Tiền điện và nước theo tháng của một năm
+router.get('/electric-water-by-month/:year', StatController.getElectricWaterByMonth);
+
+// GET: Tháng dùng điện/nước nhiều nhất và ít nhất trong năm
+router.get('/max-min-electric-water/:year', StatController.getMaxMinElectricWaterUsage);
 
 module.exports = router;
