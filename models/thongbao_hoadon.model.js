@@ -1,93 +1,67 @@
-const pool = require('../db/postgres');
-
-const ThongBaoHoaDon = {
+const pool = require('../db/postgres'); // Pool từ file db/postgres.js
+const InvoiceNotification = {
   // Lấy tất cả thông báo hóa đơn
-  getAll: async function() {
-    const query = `
-      SELECT * FROM thong_bao_hoa_don
-      ORDER BY ngay_tao DESC
-    `;
-    const result = await pool.query(query);
+  async getAllNotifications() {
+    const query = 'SELECT * FROM invoice_notifications';
+    const result = await db.query(query);
     return result.rows;
   },
 
   // Lấy thông báo hóa đơn theo ID
-  getById: async function(ma_thong_bao_hoa_don) {
-    const query = `
-      SELECT * FROM thong_bao_hoa_don
-      WHERE ma_thong_bao_hoa_don = $1
-    `;
-    const result = await pool.query(query, [ma_thong_bao_hoa_don]);
+  async getNotificationById(id) {
+    const query = 'SELECT * FROM invoice_notifications WHERE id = $1';
+    const result = await db.query(query, [id]);
     return result.rows[0];
   },
 
-  // Lấy thông báo theo mã hóa đơn
-  getByInvoiceId: async function(ma_hoa_don) {
-    const query = `
-      SELECT * FROM thong_bao_hoa_don
-      WHERE ma_hoa_don = $1
-      ORDER BY ngay_tao DESC
-    `;
-    const result = await pool.query(query, [ma_hoa_don]);
+  // Lấy thông báo hóa đơn theo mã hóa đơn
+  async getNotificationsByInvoiceId(invoiceId) {
+    const query = 'SELECT * FROM invoice_notifications WHERE invoice_id = $1';
+    const result = await db.query(query, [invoiceId]);
+    return result.rows;
+  },
+
+  // Lấy thông báo hóa đơn theo mã phòng
+  async getNotificationsByRoomId(roomId) {
+    const query = 'SELECT * FROM invoice_notifications WHERE room_id = $1';
+    const result = await db.query(query, [roomId]);
+    return result.rows;
+  },
+
+  // Lấy thông báo hóa đơn theo mã dãy trọ
+  async getNotificationsByMotelId(motelId) {
+    const query = 'SELECT * FROM invoice_notifications WHERE motel_id = $1';
+    const result = await db.query(query, [motelId]);
     return result.rows;
   },
 
   // Tạo thông báo hóa đơn mới
-  create: async function(data) {
-    const { ma_hoa_don, noi_dung } = data;
-    
-    if (!ma_hoa_don || !noi_dung) {
-      throw new Error('Thiếu thông tin bắt buộc: mã hóa đơn hoặc nội dung');
-    }
-    
+  async createNotification(notification) {
+    const { invoice_id, room_id, motel_id, message, created_at } = notification;
     const query = `
-      INSERT INTO thong_bao_hoa_don (ma_hoa_don, noi_dung, ngay_tao)
-      VALUES ($1, $2, NOW())
-      RETURNING *
-    `;
-    const result = await pool.query(query, [ma_hoa_don, noi_dung]);
+      INSERT INTO invoice_notifications (invoice_id, room_id, motel_id, message, created_at)
+      VALUES ($1, $2, $3, $4, $5) RETURNING *`;
+    const result = await db.query(query, [invoice_id, room_id, motel_id, message, created_at]);
     return result.rows[0];
   },
 
   // Cập nhật thông báo hóa đơn
-  update: async function(ma_thong_bao_hoa_don, data) {
-    const { noi_dung } = data;
-    
-    if (!noi_dung) {
-      throw new Error('Thiếu nội dung thông báo cần cập nhật');
-    }
-    
+  async updateNotification(id, updates) {
+    const { message, updated_at } = updates;
     const query = `
-      UPDATE thong_bao_hoa_don
-      SET noi_dung = $1
-      WHERE ma_thong_bao_hoa_don = $2
-      RETURNING *
-    `;
-    const result = await pool.query(query, [noi_dung, ma_thong_bao_hoa_don]);
+      UPDATE invoice_notifications
+      SET message = $1, updated_at = $2
+      WHERE id = $3 RETURNING *`;
+    const result = await db.query(query, [message, updated_at, id]);
     return result.rows[0];
   },
 
   // Xóa thông báo hóa đơn
-  delete: async function(ma_thong_bao_hoa_don) {
-    const query = `
-      DELETE FROM thong_bao_hoa_don
-      WHERE ma_thong_bao_hoa_don = $1
-      RETURNING *
-    `;
-    const result = await pool.query(query, [ma_thong_bao_hoa_don]);
+  async deleteNotification(id) {
+    const query = 'DELETE FROM invoice_notifications WHERE id = $1 RETURNING *';
+    const result = await db.query(query, [id]);
     return result.rows[0];
   },
-
-  // Xóa tất cả thông báo của một hóa đơn
-  deleteByInvoiceId: async function(ma_hoa_don) {
-    const query = `
-      DELETE FROM thong_bao_hoa_don
-      WHERE ma_hoa_don = $1
-      RETURNING *
-    `;
-    const result = await pool.query(query, [ma_hoa_don]);
-    return result.rows;
-  }
 };
 
-module.exports = ThongBaoHoaDon; 
+module.exports = InvoiceNotification;
