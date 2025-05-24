@@ -41,7 +41,7 @@ async function updateAdmin(email, updatedData) {
   }
 
   const query = `
-    UPDATE "ADMIN" 
+    UPDATE ADMIN
     SET ${fields.join(', ')}
     WHERE "email" = $${index}
     RETURNING *
