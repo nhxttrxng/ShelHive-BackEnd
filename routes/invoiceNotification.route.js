@@ -15,7 +15,7 @@ router.get('/by-invoice/:invoiceId', invoiceNotificationController.getNotificati
 router.get('/by-room/:roomId', invoiceNotificationController.getNotificationsByRoomId);
 
 // Lấy thông báo theo mã dãy trọ
-router.get('/by-motel/:motelId', invoiceNotificationController.getNotificationsByMotelId);
+router.get('/by-motel/:ma_day', invoiceNotificationController.getNotificationsByMotelId);
 
 // Tạo thông báo mới
 router.post('/', invoiceNotificationController.createNotification);
