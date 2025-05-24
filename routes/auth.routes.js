@@ -11,5 +11,6 @@ router.post('/resend-otp', auth.resendOtp);
 router.get('/verify', auth.verifyEmail);
 router.get('/check-verify', auth.checkVerify);
 router.post('/logout', auth.logout);
+router.post('/change-password', auth.changePassword);
 
 module.exports = router;

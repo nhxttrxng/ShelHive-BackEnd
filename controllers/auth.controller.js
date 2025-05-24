@@ -439,3 +439,41 @@ exports.logout = async (req, res) => {
   console.log(`Người dùng ${email} đã logout`);
   return res.status(200).json({ message: 'Đăng xuất thành công' });
 };
+
+// Đổi mật khẩu (user đã đăng nhập, nhập đúng mật khẩu cũ)
+exports.changePassword = async (req, res) => {
+  const { email, oldPassword, newPassword } = req.body;
+  if (!email || !oldPassword || !newPassword)
+    return res.status(400).json({ message: 'Thiếu thông tin' });
+
+  try {
+    // Ưu tiên user thường, nếu không có thì mới kiểm tra admin
+    let user = await User.getUserByEmail(email);
+    let isUser = true;
+    if (!user) {
+      user = await Admin.getAdminByEmail(email);
+      isUser = false;
+    }
+    if (!user) return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
+
+    // So sánh mật khẩu cũ
+    const match = await bcrypt.compare(oldPassword, user.mat_khau);
+    if (!match) {
+      return res.status(401).json({ message: 'Mật khẩu cũ không đúng' });
+    }
+
+    // Hash mật khẩu mới rồi update
+    const hash = await bcrypt.hash(newPassword, 10);
+    if (isUser) {
+      await User.updatePassword(email, hash);
+    } else {
+      await Admin.updatePassword(email, hash);
+    }
+
+    res.status(200).json({ message: 'Đổi mật khẩu thành công' });
+  } catch (err) {
+    console.error('Lỗi khi đổi mật khẩu:', err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
