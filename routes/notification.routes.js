@@ -18,9 +18,9 @@ router.get('/phong/:ma_phong', notificationController.getByMaPhong);
 router.post('/', notificationController.create);
 
 // Cập nhật thông báo
-router.put('/:id', notificationController.update);
+router.put('/:noi_dung', notificationController.update);
 
 // Xóa thông báo
-router.delete('/:id', notificationController.remove);
+router.delete('/:noi_dung', notificationController.remove);
 
 module.exports = router;
