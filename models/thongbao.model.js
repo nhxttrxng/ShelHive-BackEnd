@@ -9,7 +9,7 @@ const Notification = {
   // Lấy thông báo theo mã dãy
   getByMaDay: async function(ma_day) {
     const result = await pool.query(
-      'SELECT noi_dung FROM thong_bao WHERE ma_day = $1 ORDER BY ngay_tao DESC',
+      'SELECT * FROM thong_bao WHERE ma_day = $1 ORDER BY ngay_tao DESC',
       [ma_day]
     );
     return result.rows;
