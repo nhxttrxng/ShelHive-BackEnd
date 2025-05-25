@@ -17,6 +17,7 @@ const notificationRoutes = require("./routes/notification.routes");
 const reportRoutes = require("./routes/report.routes");
 const otpRoutes = require("./routes/otp.routes");
 const invoiceNotificationRoutes = require("./routes/invoiceNotification.route");
+const momoRoute = require('./routes/momo.routes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use("/api/notifications", notificationRoutes); // Tạo route cho API lấy 
 app.use("/api/reports", reportRoutes); // Tạo route cho API lấy báo cáo
 app.use("/api/otps", otpRoutes);
 app.use("/api/invoice-notifications", invoiceNotificationRoutes); // Tạo route cho API thông báo hóa đơn
+app.use('/api/momo', momoRoute);
 
 // Port từ file .env hoặc mặc định là 3000
 const PORT = process.env.PORT || 3000;
