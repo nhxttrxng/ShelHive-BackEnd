@@ -126,47 +126,37 @@ exports.createInvoice = async (req, res) => {
   try {
     // Kiểm tra xem phòng có tồn tại không
     const room = await Phong.getPhongByMaPhong(ma_phong);
-    
     if (!room) {
       return res.status(404).json({ message: 'Không tìm thấy phòng' });
     }
-    
-    // Kiểm tra xem phòng đã có hóa đơn trong tháng hiện tại chưa
-    const currentDate = new Date();
-    
+
     // Lấy tháng và năm từ ngày hạn đóng tiền
     const hanDongTienDate = new Date(han_dong_tien);
-    const month = hanDongTienDate.getMonth() + 1; // Tháng trong JavaScript bắt đầu từ 0
+    const month = hanDongTienDate.getMonth() + 1;
     const year = hanDongTienDate.getFullYear();
-    
-    console.log(`Đang kiểm tra hóa đơn cho phòng ${ma_phong} trong tháng ${month}/${year} của hạn đóng tiền`);
-    
+
     // Kiểm tra hóa đơn theo tháng/năm của hạn đóng tiền
     const hasInvoiceInMonth = await HoaDon.checkExistInvoiceInMonth(ma_phong, month, year);
-    console.log(`Kết quả kiểm tra: ${hasInvoiceInMonth ? 'Đã có hóa đơn' : 'Chưa có hóa đơn'}`);
-    
     if (hasInvoiceInMonth) {
       return res.status(400).json({ message: `Phòng này đã có hóa đơn trong tháng ${month}/${year}` });
     }
-    
+
     // Lấy thông tin dãy trọ để lấy giá điện, nước
     const dayTro = await DayTro.getDayTroByMaDay(room.ma_day);
-    
+
     // Tính tiền điện, nước
     const so_dien = chi_so_dien_moi - chi_so_dien_cu;
     const so_nuoc = chi_so_nuoc_moi - chi_so_nuoc_cu;
     const tien_dien = so_dien * dayTro.gia_dien;
     const tien_nuoc = so_nuoc * dayTro.gia_nuoc;
-    
+
     // Giá phòng mặc định là 1,100,000 đồng nếu không có
     const DEFAULT_ROOM_PRICE = 1100000.00;
-    
-    // Lấy tiền phòng từ request hoặc từ giá phòng hoặc dùng giá mặc định
     const tien_phong_final = tien_phong || (room.gia_thue && room.gia_thue > 0 ? room.gia_thue : DEFAULT_ROOM_PRICE);
-    
+
     // Tính tổng tiền
     const tong_tien = tien_dien + tien_nuoc + tien_phong_final;
-    
+
     // Tạo hóa đơn với đầy đủ thông tin
     const newInvoice = await HoaDon.addHoaDon({
       ma_phong,
@@ -184,27 +174,17 @@ exports.createInvoice = async (req, res) => {
       trang_thai: 'chưa thanh toán',
       ngay_tao: new Date()
     });
-    
-    // Tạo thông báo hóa đơn mới
+
+    // Tạo thông báo hóa đơn mới (chỉ gồm 3 trường: mã, nội dung, ngày tạo)
     const hanDongTien = new Date(han_dong_tien).toLocaleDateString('vi-VN');
     const noiDungThongBao = `Hóa đơn mới: Phòng ${ma_phong} có hóa đơn ${formatCurrency(tong_tien)}đ, hạn đóng tiền ${hanDongTien}`;
-    
-    // Tạo thông báo riêng cho hóa đơn
-    await ThongBaoHoaDon.create({
+
+    await ThongBaoHoaDon.createNotification({
       ma_hoa_don: newInvoice.ma_hoa_don,
-      noi_dung: noiDungThongBao
+      noi_dung: noiDungThongBao,
+      ngay_tao: new Date() // Bổ sung ngày tạo
     });
-    
-    // Lấy mã dãy từ mã phòng
-    const ma_day = room.ma_day;
-    
-    // Tạo thông báo chung
-    await Notification.create({
-      ma_day,
-      ma_phong,
-      noi_dung: noiDungThongBao
-    });
-    
+
     res.status(201).json({
       message: 'Tạo hóa đơn và thông báo thành công',
       invoice: newInvoice
