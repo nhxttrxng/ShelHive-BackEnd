@@ -66,12 +66,18 @@ exports.returnUrl = async (req, res) => {
         const ma_hoa_don = params.vnp_TxnRef;
         try {
             await pool.query(
-                "UPDATE hoa_don SET trang_thai = 'Đã thanh toán' WHERE ma_hoa_don = $1",
+                `UPDATE hoa_don 
+                 SET trang_thai = 'Đã thanh toán', ngay_thanh_toan = NOW() 
+                 WHERE ma_hoa_don = $1`,
                 [ma_hoa_don]
             );
             res.send('Thanh toán thành công!');
         } catch (err) {
+            console.error(err);
             res.status(500).send('Thanh toán thành công nhưng lỗi cập nhật hóa đơn!');
         }
+    } else {
+        res.status(400).send('Thanh toán không thành công!');
     }
 };
+
