@@ -1,9 +1,9 @@
 const qs = require('qs');
 const crypto = require('crypto');
 require('dotenv').config();
-const pool = require('../db/postgres'); // hoặc pool DB của bạn
+const pool = require('../db/postgres'); // Thay đổi tuỳ theo DB pool bạn đang dùng
 
-// Helper
+// Helper: Format date cho VNPAY (yyyyMMddHHmmss)
 function dateToVNPayFormat(date) {
     const pad = n => n < 10 ? '0' + n : n;
     return date.getFullYear() +
@@ -14,85 +14,101 @@ function dateToVNPayFormat(date) {
         pad(date.getSeconds());
 }
 
+// Helper: Sort object by key
 function sortObject(obj) {
     const sorted = {};
-    Object.keys(obj).sort().forEach(key => {
-        sorted[key] = obj[key];
-    });
+    Object.keys(obj).sort().forEach(key => sorted[key] = obj[key]);
     return sorted;
 }
 
-// 1. API Tạo link thanh toán
+// Helper: Verify returnUrl
+function verifyReturnUrl(params, secureHash, secretKey) {
+    const sortedParams = sortObject(params);
+    const signData = qs.stringify(sortedParams, { encode: false });
+    const hash = crypto.createHmac("sha512", secretKey)
+        .update(signData, 'utf-8')
+        .digest("hex");
+    return hash === secureHash;
+}
+
 exports.createPayment = (req, res) => {
-    const { amount, orderInfo, ma_hoa_don } = req.body;
+    // Lấy IP client, luôn chuyển về IPv4 nếu là ::1
+    let ipAddr = req.headers['x-forwarded-for'] ||
+        req.connection?.remoteAddress ||
+        req.socket?.remoteAddress ||
+        req.connection?.socket?.remoteAddress || '127.0.0.1';
+    if (ipAddr === '::1' || ipAddr === '::ffff:127.0.0.1') ipAddr = '127.0.0.1';
+
+    // Lấy biến môi trường
+    const tmnCode = process.env.VNP_TMN_CODE;
+    const secretKey = process.env.VNP_HASH_SECRET;
+    const vnpUrl = process.env.VNP_URL;
+    const returnUrl = process.env.VNP_RETURN_URL;
+
+    // Parse params từ body
+    const { amount, orderDescription, orderType, bankCode, language, ma_hoa_don } = req.body;
     const date = new Date();
-    const vnp_TxnRef = `${date.getTime()}`; // mã giao dịch duy nhất
-    const vnp_OrderInfo = orderInfo || `Thanh toan hoa don ${ma_hoa_don}`;
-    const vnp_Amount = parseInt(amount) * 100;
-    const vnp_Locale = 'vn';
 
-    const vnp_TmnCode = process.env.VNP_TMN_CODE;
-    const vnp_HashSecret = process.env.VNP_HASH_SECRET;
-    const vnp_Url = process.env.VNP_URL;
-    const vnp_ReturnUrl = process.env.VNP_RETURN_URL;
-
-    let vnp_Params = {
+    // Tham số bắt buộc
+    const createDate = dateToVNPayFormat(date);
+    const expireDate = dateToVNPayFormat(new Date(date.getTime() + 15 * 60 * 1000)); // +15 phút
+    const orderId = date.getTime().toString().slice(-8); // hoặc random
+    const vnp_Params = {
         'vnp_Version': '2.1.0',
         'vnp_Command': 'pay',
-        'vnp_TmnCode': vnp_TmnCode,
-        'vnp_Amount': vnp_Amount,
+        'vnp_TmnCode': tmnCode,
+        'vnp_Amount': amount * 100, // VNPAY yêu cầu nhân 100
         'vnp_CurrCode': 'VND',
-        'vnp_TxnRef': vnp_TxnRef,
-        'vnp_OrderInfo': vnp_OrderInfo,
-        'vnp_OrderType': 'other',
-        'vnp_Locale': vnp_Locale,
-        'vnp_ReturnUrl': vnp_ReturnUrl,
-        'vnp_IpAddr': req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1',
-        'vnp_CreateDate': dateToVNPayFormat(date),
-        'vnp_ExtraData': Buffer.from(ma_hoa_don + '').toString('base64')
+        'vnp_TxnRef': orderId,
+        'vnp_OrderInfo': orderDescription || `Thanh toan hoa don ${ma_hoa_don || ''}`,
+        'vnp_OrderType': orderType || 'other',
+        'vnp_Locale': language || 'vn',
+        'vnp_ReturnUrl': returnUrl,
+        'vnp_IpAddr': ipAddr,
+        'vnp_CreateDate': createDate,
+        'vnp_ExpireDate': expireDate,
+        'vnp_ExtraData': ma_hoa_don ? Buffer.from(ma_hoa_don + '').toString('base64') : '',
     };
+    if (bankCode) vnp_Params['vnp_BankCode'] = bankCode;
 
-    // Không thêm vnp_BankCode nếu không chọn ngân hàng mặc định!
-    vnp_Params = sortObject(vnp_Params);
+    // Sort và tạo secure hash
+    const sortedParams = sortObject(vnp_Params);
+    const signData = qs.stringify(sortedParams, { encode: false });
+    const signed = crypto.createHmac("sha512", secretKey)
+        .update(signData, 'utf-8')
+        .digest("hex");
+    sortedParams['vnp_SecureHash'] = signed;
 
-    // Chú ý! Không có ký tự thừa hoặc xuống dòng
-    const signData = qs.stringify(vnp_Params, { encode: false });
-    const secureHash = crypto.createHmac('sha512', vnp_HashSecret)
-        .update(signData)
-        .digest('hex');
-    vnp_Params['vnp_SecureHash'] = secureHash;
+    // Build URL
+    const paymentUrl = vnpUrl + '?' + qs.stringify(sortedParams, { encode: false });
 
-    const paymentUrl = vnp_Url + '?' + qs.stringify(vnp_Params, { encode: true });
-
+    // FE lấy paymentUrl, hoặc res.redirect nếu làm web
     return res.json({ paymentUrl });
 };
 
-// 2. API Xử lý kết quả thanh toán
+// API xử lý returnUrl
 exports.returnUrl = async (req, res) => {
-    const query = req.query;
-    const vnp_HashSecret = process.env.VNP_HASH_SECRET;
-    const vnp_SecureHash = query.vnp_SecureHash;
+    const params = { ...req.query };
+    const secureHash = params.vnp_SecureHash;
+    delete params.vnp_SecureHash;
+    delete params.vnp_SecureHashType;
 
-    delete query.vnp_SecureHash;
-    delete query.vnp_SecureHashType;
+    // Tự verify hash (không phụ thuộc vnpay lib)
+    const isValid = verifyReturnUrl(params, secureHash, process.env.VNP_HASH_SECRET);
+    if (!isValid) return res.status(400).send('Chuỗi hash không hợp lệ!');
 
-    const sortedQuery = sortObject(query);
-    const signData = qs.stringify(sortedQuery, { encode: false });
-    const checkHash = crypto.createHmac('sha512', vnp_HashSecret).update(signData).digest('hex');
-
-    if (vnp_SecureHash === checkHash) {
-        if (query.vnp_ResponseCode === '00') {
-            const ma_hoa_don = Buffer.from(query.vnp_ExtraData, 'base64').toString();
-            try {
-                await pool.query("UPDATE hoa_don SET trang_thai = 'Đã thanh toán' WHERE ma_hoa_don = $1", [ma_hoa_don]);
-                res.send('Thanh toán thành công!');
-            } catch (err) {
-                res.status(500).send('Thanh toán thành công, nhưng lỗi cập nhật DB!');
-            }
-        } else {
-            res.send('Thanh toán thất bại hoặc bị huỷ!');
+    if (params.vnp_ResponseCode === '00') {
+        const ma_hoa_don = Buffer.from(params.vnp_ExtraData, 'base64').toString();
+        try {
+            await pool.query(
+                "UPDATE hoa_don SET trang_thai = 'Đã thanh toán' WHERE ma_hoa_don = $1",
+                [ma_hoa_don]
+            );
+            res.send('Thanh toán thành công!');
+        } catch (err) {
+            res.status(500).send('Thanh toán thành công nhưng lỗi DB!');
         }
     } else {
-        res.status(400).send('Chuỗi hash không hợp lệ!');
+        res.send('Thanh toán thất bại hoặc bị huỷ!');
     }
 };
