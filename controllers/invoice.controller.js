@@ -116,10 +116,11 @@ exports.createInvoice = async (req, res) => {
     chi_so_nuoc_cu, 
     chi_so_nuoc_moi, 
     tien_phong,
-    han_dong_tien 
+    han_dong_tien,
+    thang_nam 
   } = req.body;
   
-  if (!ma_phong || !chi_so_dien_moi || !chi_so_nuoc_moi || !han_dong_tien) {
+  if (!ma_phong || !chi_so_dien_moi || !chi_so_nuoc_moi || !han_dong_tien || !thang_nam) {
     return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
   }
   
@@ -172,7 +173,8 @@ exports.createInvoice = async (req, res) => {
       tien_phong: tien_phong_final,
       han_dong_tien,
       trang_thai: 'chưa thanh toán',
-      ngay_tao: new Date()
+      ngay_tao: new Date(),
+      thang_nam
     });
 
     // Tạo thông báo hóa đơn mới (chỉ gồm 3 trường: mã, nội dung, ngày tạo)
