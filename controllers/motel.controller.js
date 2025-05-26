@@ -126,3 +126,24 @@ exports.delete = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
+exports.getByMaDay = async (req, res) => {
+  const ma_day = req.params.ma_day;
+
+  if (!ma_day) {
+    return res.status(400).json({ message: 'Thiếu mã dãy trọ' });
+  }
+
+  try {
+    const dayTro = await DayTro.getDayTroByMaDay(ma_day);
+
+    if (!dayTro) {
+      return res.status(404).json({ message: 'Không tìm thấy dãy trọ với mã này' });
+    }
+
+    res.status(200).json(dayTro);
+  } catch (err) {
+    console.error('Lỗi khi lấy dãy trọ theo mã dãy:', err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
