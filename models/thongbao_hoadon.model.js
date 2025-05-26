@@ -38,17 +38,23 @@ const InvoiceNotification = {
   },
  // Lấy thông báo hóa đơn theo mã phòng trọ (ma_phong)
   async getInvoiceNotificationsByMaPhong(ma_phong) {
-    const query = `
-      SELECT tbhd.noi_dung, tbhd.ngay_tao,p.ma_phong
-      FROM thong_bao_hoa_don tbhd
-      JOIN hoa_don hd ON tbhd.ma_hoa_don = hd.ma_hoa_don
-      JOIN phong p ON hd.ma_phong = p.ma_phong
-      WHERE p.ma_phong = $1
-      ORDER BY tbhd.ngay_tao DESC
-    `;
-    const result = await db.query(query, [ma_phong]);
-    return result.rows;
-  },
+  const query = `
+    SELECT tbhd.noi_dung, tbhd.ngay_tao, p.ma_phong
+    FROM thong_bao_hoa_don tbhd
+    JOIN hoa_don hd ON tbhd.ma_hoa_don = hd.ma_hoa_don
+    JOIN phong p ON hd.ma_phong = p.ma_phong
+    WHERE p.ma_phong = $1
+    ORDER BY tbhd.ngay_tao DESC
+  `;
+  const result = await db.query(query, [ma_phong]);
+
+  // Trả về dưới dạng object có key "data"
+  return {
+    success: true,
+    data: result.rows
+  };
+},
+ 
 
   // Tạo thông báo hóa đơn mới
   async createNotification(notification) {

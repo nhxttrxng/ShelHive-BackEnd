@@ -43,11 +43,28 @@ exports.getInvoiceNotificationsByMaDay = async (req, res) => {
 
 // GET theo mã phòng
 exports.getInvoiceNotificationsByMaPhong = async (req, res) => {
+ const { ma_phong } = req.params;
   try {
-    const notifications = await InvoiceNotification.getInvoiceNotificationsByMaPhong(req.params.ma_phong);
-    res.json(notifications);
+    const notifications = await Notification.getThongBaoByPhongId(ma_phong);
+
+    if (!notifications || notifications.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông báo cho phòng này'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: notifications
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Lỗi khi lấy thông báo theo mã phòng.' });
+    console.error('Lỗi khi lấy thông báo theo mã phòng:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Đã xảy ra lỗi khi lấy thông báo',
+      error: error.message
+    });
   }
 };
 
