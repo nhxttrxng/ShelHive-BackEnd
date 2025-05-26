@@ -20,14 +20,14 @@ const Notification = {
     return result.rows[0];
   },
 
-  update: async function(ma_phan_anh, noi_dung) {
+  update: async function(ma_thong_bao, noi_dung) {
     const result = await pool.query(
-      'UPDATE thong_bao SET noi_dung = $1 WHERE ma_thong_bao = $2 RETURNING *', [noi_dung, ma_phan_anh]);
+      'UPDATE thong_bao SET noi_dung = $1 WHERE ma_thong_bao = $2 RETURNING *', [noi_dung, ma_thong_bao]);
     return result.rows[0];
   },
 
-  remove: async function(ma_phan_anh) {
-    const result = await pool.query('DELETE FROM thong_bao WHERE ma_thong_bao = $1', [ma_phan_anh]);
+  remove: async function(ma_thong_bao) {
+    const result = await pool.query('DELETE FROM thong_bao WHERE ma_thong_bao = $1', [ma_thong_bao]);
     return result.rowCount;
   },
     getThongBaoByPhongId: async function(ma_phong) {

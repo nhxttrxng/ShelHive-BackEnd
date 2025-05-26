@@ -2,31 +2,28 @@ const express = require('express');
 const router = express.Router();
 const invoiceNotificationController = require('../controllers/invoiceNotification.controller');
 
-// Lấy tất cả thông báo
+// GET tất cả thông báo hóa đơn
 router.get('/', invoiceNotificationController.getAllNotifications);
 
-// Lấy thông báo theo ID
+// GET thông báo hóa đơn theo ID
 router.get('/:id', invoiceNotificationController.getNotificationById);
 
-// Lấy thông báo theo mã hóa đơn
-router.get('/by-invoice/:invoiceId', invoiceNotificationController.getNotificationsByInvoiceId);
+// GET thông báo hóa đơn theo mã hóa đơn
+router.get('/mahoadon/:ma_hoa_don', invoiceNotificationController.getNotificationsByHoaDonId);
 
-// Lấy thông báo theo mã phòng
-router.get('/by-room/:roomId', invoiceNotificationController.getNotificationsByRoomId);
+// GET thông báo hóa đơn theo mã dãy trọ
+router.get('/daytro/:ma_day', invoiceNotificationController.getInvoiceNotificationsByMaDay);
 
-// Lấy thông báo theo mã dãy trọ
-router.get('/by-motel/:ma_day', invoiceNotificationController.getNotificationsByMotelId);
+// GET thông báo hóa đơn theo mã phòng trọ
+router.get('/phong/:ma_phong', invoiceNotificationController.getInvoiceNotificationsByMaPhong);
 
-// Tạo thông báo mới
+// POST tạo thông báo mới
 router.post('/', invoiceNotificationController.createNotification);
 
-// Tạo thông báo tự động
-router.post('/auto', invoiceNotificationController.createAutomaticNotification);
+// PUT cập nhật thông báo
+router.put('/:ma_thong_bao_hoa_don', invoiceNotificationController.updateNotification);
 
-// Cập nhật thông báo
-router.put('/:id', invoiceNotificationController.updateNotification);
-
-// Xóa thông báo
-router.delete('/:id', invoiceNotificationController.deleteNotification);
+// DELETE xóa thông báo
+router.delete('/:ma_thong_bao_hoa_don', invoiceNotificationController.deleteNotification);
 
 module.exports = router;

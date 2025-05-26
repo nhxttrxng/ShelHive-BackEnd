@@ -16,16 +16,16 @@ const InvoiceNotification = {
   },
 
   // Lấy thông báo hóa đơn theo mã hóa đơn
-  async getNotificationsByHoaDonId(maHoaDon) {
+  async getNotificationsByHoaDonId(ma_hoa_don) {
     const query = 'SELECT * FROM thong_bao_hoa_don WHERE ma_hoa_don = $1 ORDER BY ngay_tao DESC';
     const result = await db.query(query, [maHoaDon]);
     return result.rows;
   },
 
   // Lấy thông báo hóa đơn theo mã dãy trọ (ma_day)
-  async getInvoiceNotificationsByMaDay(maDay) {
+  async getInvoiceNotificationsByMaDay(ma_day) {
     const query = `
-      SELECT tbhd.noi_dung, tbhd.ngay_tao
+      SELECT tbhd.noi_dung, tbhd.ngay_tao,dt.ma_day
       FROM thong_bao_hoa_don tbhd
       JOIN hoa_don hd ON tbhd.ma_hoa_don = hd.ma_hoa_don
       JOIN phong p ON hd.ma_phong = p.ma_phong
@@ -33,7 +33,20 @@ const InvoiceNotification = {
       WHERE dt.ma_day = $1
       ORDER BY tbhd.ngay_tao DESC
     `;
-    const result = await db.query(query, [maDay]);
+    const result = await db.query(query, [ma_day]);
+    return result.rows;
+  },
+ // Lấy thông báo hóa đơn theo mã phòng trọ (ma_phong)
+  async getInvoiceNotificationsByMaPhong(ma_phong) {
+    const query = `
+      SELECT tbhd.noi_dung, tbhd.ngay_tao,p.ma_phong
+      FROM thong_bao_hoa_don tbhd
+      JOIN hoa_don hd ON tbhd.ma_hoa_don = hd.ma_hoa_don
+      JOIN phong p ON hd.ma_phong = p.ma_phong
+      WHERE p.ma_phong = $1
+      ORDER BY tbhd.ngay_tao DESC
+    `;
+    const result = await db.query(query, [ma_phong]);
     return result.rows;
   },
 
@@ -49,21 +62,24 @@ const InvoiceNotification = {
   },
 
   // Cập nhật thông báo hóa đơn
-  async updateNotification(id, updates) {
-    const { noi_dung, ngay_tao } = updates;
+// ...existing code...
+  // Cập nhật thông báo hóa đơn
+  async updateNotification(ma_thong_bao_hoa_don, updates) {
+    const { noi_dung } = updates; // chỉ lấy noi_dung từ updates
     const query = `
       UPDATE thong_bao_hoa_don
-      SET noi_dung = $1, ngay_tao = $2
-      WHERE ma_thong_bao_hoa_don = $3 RETURNING *
+      SET noi_dung = $1
+      WHERE ma_thong_bao_hoa_don = $2 RETURNING *
     `;
-    const result = await db.query(query, [noi_dung, ngay_tao, id]);
+    const result = await db.query(query, [noi_dung, ma_thong_bao_hoa_don]);
     return result.rows[0];
   },
+// ...existing code...
 
   // Xóa thông báo hóa đơn
-  async deleteNotification(id) {
+  async deleteNotification(ma_thong_bao_hoa_don) {
     const query = 'DELETE FROM thong_bao_hoa_don WHERE ma_thong_bao_hoa_don = $1 RETURNING *';
-    const result = await db.query(query, [id]);
+    const result = await db.query(query, [ma_thong_bao_hoa_don]);
     return result.rows[0];
   },
 };
