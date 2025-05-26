@@ -53,12 +53,12 @@ exports.getByMaPhong = async (req, res) => {
 
 // Tạo mới thông báo
 exports.create = async (req, res) => {
-  const { ma_day, ma_phong, noi_dung } = req.body;
+  const { ma_day, noi_dung } = req.body;
   if (!noi_dung)
     return res.status(400).json({ message: 'Vui lòng điền đầy đủ nội dung' });
 
   try {
-    const notification = await Notification.create({ ma_day, ma_phong, noi_dung });
+    const notification = await Notification.create({ ma_day, noi_dung });
     res.status(201).json({ message: 'Tạo thông báo thành công', notification });
   } catch (err) {
     console.error('Lỗi create:', err);
