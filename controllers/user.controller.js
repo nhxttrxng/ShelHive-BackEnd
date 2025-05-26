@@ -118,6 +118,7 @@ exports.getFullInfoByEmail = async (req, res) => {
       ho_ten: user.ho_ten,
       avt: user.avt,
       ma_phong: null,
+      ma_day: null,
       ten_tro: null,
       dia_chi: null
     };
@@ -126,6 +127,7 @@ exports.getFullInfoByEmail = async (req, res) => {
     const phong = await Phong.getPhongByEmailUser(email);
     if (phong) {
       result.ma_phong = phong.ma_phong;
+      result.ma_day = phong.ma_day;
 
       // Lấy thông tin nhà trọ nếu có
       const dayTro = await DayTro.getDayTroByMaDay(phong.ma_day);
