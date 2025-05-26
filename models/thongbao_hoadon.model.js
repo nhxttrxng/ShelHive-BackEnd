@@ -25,7 +25,7 @@ const InvoiceNotification = {
   // Lấy thông báo hóa đơn theo mã dãy trọ (ma_day)
   async getInvoiceNotificationsByMaDay(ma_day) {
     const query = `
-      SELECT tbhd.noi_dung, tbhd.ngay_tao,dt.ma_day
+      SELECT tbhd.*,dt.ma_day
       FROM thong_bao_hoa_don tbhd
       JOIN hoa_don hd ON tbhd.ma_hoa_don = hd.ma_hoa_don
       JOIN phong p ON hd.ma_phong = p.ma_phong
