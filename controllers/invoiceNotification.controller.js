@@ -42,22 +42,22 @@ exports.getInvoiceNotificationsByMaDay = async (req, res) => {
 };
 
 // GET theo mã phòng
+// ✅ GET theo mã phòng
 exports.getInvoiceNotificationsByMaPhong = async (req, res) => {
- const { ma_phong } = req.params;
-  try {
-    const notifications = await Notification.getThongBaoByPhongId(ma_phong);
+  const { ma_phong } = req.params;
 
-    if (!notifications || notifications.length === 0) {
+  try {
+    const result = await InvoiceNotification.getInvoiceNotificationsByMaPhong(ma_phong); // GỌI ĐÚNG MODEL
+
+    if (!result.data || result.data.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy thông báo cho phòng này'
       });
     }
 
-    res.status(200).json({
-      success: true,
-      data: notifications
-    });
+    // Trả lại đúng format { success: true, data: [...] }
+    res.status(200).json(result);
   } catch (error) {
     console.error('Lỗi khi lấy thông báo theo mã phòng:', error);
     res.status(500).json({
