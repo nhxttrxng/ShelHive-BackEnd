@@ -75,7 +75,7 @@ exports.create = async (req, res) => {
 
 // Cập nhật thông báo
 exports.update = async (req, res) => {
-  const id = req.params.id;
+  const { ma_thong_bao } = req.params;
   const { noi_dung } = req.body;
 
   if (!noi_dung) {
@@ -83,7 +83,7 @@ exports.update = async (req, res) => {
   }
 
   try {
-    const updated = await Notification.update(id, { noi_dung });
+    const updated = await Notification.update(ma_thong_bao, noi_dung);
     if (!updated) return res.status(404).json({ message: 'Không tìm thấy thông báo' });
 
     res.status(200).json({ message: 'Cập nhật thành công', updated });
@@ -95,14 +95,28 @@ exports.update = async (req, res) => {
 
 // Xóa thông báo
 exports.remove = async (req, res) => {
-  const id = req.params.id;
+  const { ma_thong_bao } = req.params;
   try {
-    const deleted = await Notification.remove(id);
+    const deleted = await Notification.remove(ma_thong_bao);
     if (deleted === 0) return res.status(404).json({ message: 'Không tìm thấy thông báo để xóa' });
 
     res.status(200).json({ message: 'Xóa thành công' });
   } catch (err) {
     console.error('Lỗi remove:', err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+exports.getThongBaoByMaThongBao = async (req, res) => {
+  const { ma_thong_bao } = req.params;
+  try {
+    const notification = await Notification.getThongBaoByMaThongBao(ma_thong_bao);
+    if (!notification) {
+      return res.status(404).json({ message: 'Không tìm thấy thông báo này' });
+    }
+    res.status(200).json({ notification });
+  } catch (err) {
+    console.error('Lỗi khi lấy thông báo theo mã_thong_bao:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
