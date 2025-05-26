@@ -15,7 +15,7 @@ const Notification = {
     return result.rows;
   },
 
-  create: async function(noi_dung) {
+  create: async function(ma_day, noi_dung) {
     const result = await pool.query('INSERT INTO thong_bao (ma_day, noi_dung, ngay_tao) VALUES ($1, $2, NOW()) RETURNING *', [ma_day, noi_dung]);
     return result.rows[0];
   },

@@ -1,4 +1,5 @@
 const Notification = require('../models/thongbao.model');
+const DayTro = require('../models/daytro.model'); // Thêm dòng này
 
 // Lấy tất cả thông báo
 exports.getAll = async (req, res) => {
@@ -54,11 +55,17 @@ exports.getByMaPhong = async (req, res) => {
 // Tạo mới thông báo
 exports.create = async (req, res) => {
   const { ma_day, noi_dung } = req.body;
-  if (!noi_dung)
-    return res.status(400).json({ message: 'Vui lòng điền đầy đủ nội dung' });
+  if (!noi_dung || !ma_day)
+    return res.status(400).json({ message: 'Vui lòng điền đầy đủ nội dung và mã dãy' });
 
   try {
-    const notification = await Notification.create({ ma_day, noi_dung });
+    // Kiểm tra ma_day có tồn tại không
+    const day = await DayTro.getDayTroByMaDay(ma_day);
+    if (!day) {
+      return res.status(404).json({ message: 'Mã dãy không tồn tại' });
+    }
+    // Gọi đúng hàm create (truyền theo tham số chứ không phải object)
+    const notification = await Notification.create(ma_day, noi_dung);
     res.status(201).json({ message: 'Tạo thông báo thành công', notification });
   } catch (err) {
     console.error('Lỗi create:', err);

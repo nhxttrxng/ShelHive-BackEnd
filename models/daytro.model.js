@@ -133,5 +133,4 @@ module.exports = {
   getDayTroByEmailAdmin,
   updateDayTro,
   deleteDayTro,
-  getDayTroByMaDay
 };
