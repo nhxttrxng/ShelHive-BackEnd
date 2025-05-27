@@ -63,29 +63,41 @@ const thongKeController = {
     }
   },
 
-  // 6. Tiền lời điện theo dãy, tháng, năm
-  getElectricProfitByDayAndMonth: async (req, res) => {
-    try {
-      const { ma_day, month, year } = req.params;
-      const data = await ThongKe.getElectricProfitByDayAndMonth(ma_day, parseInt(month), parseInt(year));
-      res.json(data);
-    } catch (error) {
-      console.error('Error getElectricProfitByDayAndMonth:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
+// 10. Tiền lời điện theo tháng và dãy
+getElectricProfitByMonthAndDay: async (req, res) => {
+  try {
+    const { ma_day, fromMonth, fromYear, toMonth, toYear } = req.params;
+    const data = await ThongKe.getElectricProfitByDayAndRange(
+      ma_day,
+      parseInt(fromMonth, 10),
+      parseInt(fromYear, 10),
+      parseInt(toMonth, 10),
+      parseInt(toYear, 10)
+    );
+    res.json(data);
+  } catch (error) {
+    console.error('Error getElectricProfitByDayAndRange:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+},
 
-  // 7. Tiền lời nước theo dãy, tháng, năm
-  getWaterProfitByDayAndMonth: async (req, res) => {
-    try {
-      const { ma_day, month, year } = req.params;
-      const data = await ThongKe.getWaterProfitByDayAndMonth(ma_day, parseInt(month), parseInt(year));
-      res.json(data);
-    } catch (error) {
-      console.error('Error getWaterProfitByDayAndMonth:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
+// 11. Tiền lời nước theo tháng và dãy
+getWaterProfitByMonthAndDay: async (req, res) => {
+  try {
+    const { ma_day, fromMonth, fromYear, toMonth, toYear } = req.params;
+    const data = await ThongKe.getWaterProfitByDayAndRange(
+      ma_day,
+      parseInt(fromMonth, 10),
+      parseInt(fromYear, 10),
+      parseInt(toMonth, 10),
+      parseInt(toYear, 10)
+    );
+    res.json(data);
+  } catch (error) {
+    console.error('Error getWaterProfitByDayAndRange:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+},
 
   // 8. Tiền điện theo tháng và phòng
   getElectricMoneyByMonthAndRoom: async (req, res) => {
