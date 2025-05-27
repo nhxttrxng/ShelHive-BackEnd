@@ -189,7 +189,7 @@ async getWaterMoneyByRoomAndRange(ma_phong, fromMonth, fromYear, toMonth, toYear
     WHERE ma_phong = $1
       AND (EXTRACT(YEAR FROM thang_nam) * 100 + EXTRACT(MONTH FROM thang_nam)) 
           BETWEEN ($2 * 100 + $3) AND ($4 * 100 + $5)
-    GROUP BY year, month
+    GROUP BY ma_phong, month, year
     ORDER BY year, month;
   `;
 
