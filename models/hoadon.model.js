@@ -191,4 +191,17 @@ HoaDon.checkExtensionInMonth = async (id) => {
   return parseInt(result.rows[0].extension_count, 10) > 0;
 };
 
+HoaDon.getLatestChiSoMoiByPhongId = async (ma_phong) => {
+  const result = await pool.query(
+    `SELECT chi_so_dien_moi, chi_so_nuoc_moi
+     FROM hoa_don
+     WHERE ma_phong = $1
+     ORDER BY thang_nam DESC, ma_hoa_don DESC
+     LIMIT 1`,
+    [ma_phong]
+  );
+  return result.rows[0] || null;
+};
+
 module.exports = HoaDon;
+

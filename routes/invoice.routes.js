@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoice.controller');
-// Tạm bỏ middleware
-// const { verifyToken, isAdmin } = require('../middlewares/auth.middleware');
 
 // Lấy tất cả hóa đơn 
 router.get('/', invoiceController.getAllInvoices);
@@ -15,9 +13,6 @@ router.get('/detailed-stats/:year/:month', invoiceController.getDetailedMonthlyS
 
 // Tính toán hóa đơn dựa trên chỉ số điện nước (không tạo hóa đơn thật)
 router.post('/calculate', invoiceController.calculateInvoice);
-
-// Tạo hóa đơn tự động từ chỉ số điện nước
-router.post('/automatic', invoiceController.createAutomaticInvoice);
 
 // Lấy hóa đơn theo dãy trọ
 router.get('/motel/:motelId', invoiceController.getInvoicesByMotel);
@@ -33,6 +28,9 @@ router.get('/room/:roomId/unpaid', invoiceController.getUnpaidInvoicesByRoom);
 
 // Lấy hóa đơn theo ID
 router.get('/:id', invoiceController.getInvoiceById);
+
+// Lấy chỉ số điện, nước mới của hóa đơn gần nhất theo mã phòng
+router.get('/room/:roomId/latest-meter', invoiceController.getLatestMeterIndexesByRoom);
 
 // Tạo hóa đơn mới
 router.post('/', invoiceController.createInvoice);

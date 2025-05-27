@@ -111,43 +111,70 @@ exports.getUnpaidInvoicesByRoom = async (req, res) => {
 exports.createInvoice = async (req, res) => {
   const { 
     ma_phong, 
-    chi_so_dien_cu, 
+    chi_so_dien_cu,   // Có thể null/undefined
     chi_so_dien_moi, 
-    chi_so_nuoc_cu, 
+    chi_so_nuoc_cu,   // Có thể null/undefined
     chi_so_nuoc_moi, 
     tien_phong,
     han_dong_tien,
     thang_nam 
   } = req.body;
   
+  // Kiểm tra thiếu thông tin bắt buộc
   if (!ma_phong || !chi_so_dien_moi || !chi_so_nuoc_moi || !han_dong_tien || !thang_nam) {
     return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
   }
   
   try {
-    // Kiểm tra xem phòng có tồn tại không
+    // Kiểm tra phòng tồn tại
     const room = await Phong.getPhongByMaPhong(ma_phong);
     if (!room) {
       return res.status(404).json({ message: 'Không tìm thấy phòng' });
     }
 
-    // Lấy tháng và năm từ ngày hạn đóng tiền
-    const hanDongTienDate = new Date(han_dong_tien);
-    const month = hanDongTienDate.getMonth() + 1;
-    const year = hanDongTienDate.getFullYear();
+    // Lấy tháng và năm từ trường thang_nam (định dạng yyyy-mm-dd)
+    const thangNamDate = new Date(thang_nam);
+    const month = thangNamDate.getMonth() + 1;
+    const year = thangNamDate.getFullYear();
 
-    // Kiểm tra hóa đơn theo tháng/năm của hạn đóng tiền
+    // Kiểm tra hóa đơn trùng tháng/năm phòng này
     const hasInvoiceInMonth = await HoaDon.checkExistInvoiceInMonth(ma_phong, month, year);
     if (hasInvoiceInMonth) {
       return res.status(400).json({ message: `Phòng này đã có hóa đơn trong tháng ${month}/${year}` });
     }
 
-    // Lấy thông tin dãy trọ để lấy giá điện, nước
+    // Lấy chỉ số cũ của điện/nước từ hóa đơn gần nhất nếu không truyền từ client
+    let cs_dien_cu = chi_so_dien_cu;
+    let cs_nuoc_cu = chi_so_nuoc_cu;
+    if (cs_dien_cu == null || cs_nuoc_cu == null) {
+      const lastInvoice = await HoaDon.getLatestChiSoMoiByPhongId(ma_phong);
+      if (lastInvoice) {
+        if (cs_dien_cu == null) cs_dien_cu = lastInvoice.chi_so_dien_moi || 0;
+        if (cs_nuoc_cu == null) cs_nuoc_cu = lastInvoice.chi_so_nuoc_moi || 0;
+      } else {
+        // Nếu chưa có hóa đơn nào trước đó thì mặc định = 0
+        if (cs_dien_cu == null) cs_dien_cu = 0;
+        if (cs_nuoc_cu == null) cs_nuoc_cu = 0;
+      }
+    }
+
+    // Lấy giá điện, nước của dãy trọ
     const dayTro = await DayTro.getDayTroByMaDay(room.ma_day);
 
-    // Tính tiền điện, nước
-    const so_dien = chi_so_dien_moi - chi_so_dien_cu;
-    const so_nuoc = chi_so_nuoc_moi - chi_so_nuoc_cu;
+    // Tính số lượng tiêu thụ và tiền điện, nước
+    const so_dien = chi_so_dien_moi - cs_dien_cu;
+    const so_nuoc = chi_so_nuoc_moi - cs_nuoc_cu;
+
+    if (so_dien < 0 || so_nuoc < 0) {
+      return res.status(400).json({ 
+        message: 'Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ', 
+        chi_so_dien_cu: cs_dien_cu, 
+        chi_so_dien_moi, 
+        chi_so_nuoc_cu: cs_nuoc_cu, 
+        chi_so_nuoc_moi
+      });
+    }
+
     const tien_dien = so_dien * dayTro.gia_dien;
     const tien_nuoc = so_nuoc * dayTro.gia_nuoc;
 
@@ -158,15 +185,15 @@ exports.createInvoice = async (req, res) => {
     // Tính tổng tiền
     const tong_tien = tien_dien + tien_nuoc + tien_phong_final;
 
-    // Tạo hóa đơn với đầy đủ thông tin
+    // Tạo hóa đơn
     const newInvoice = await HoaDon.addHoaDon({
       ma_phong,
       tong_tien,
       so_dien,
       so_nuoc,
-      chi_so_dien_cu,
+      chi_so_dien_cu: cs_dien_cu,
       chi_so_dien_moi,
-      chi_so_nuoc_cu,
+      chi_so_nuoc_cu: cs_nuoc_cu,
       chi_so_nuoc_moi,
       tien_dien,
       tien_nuoc,
@@ -573,106 +600,28 @@ exports.calculateInvoice = async (req, res) => {
   }
 };
 
-// Tạo hóa đơn tự động từ chỉ số điện nước
-exports.createAutomaticInvoice = async (req, res) => {
-  const { ma_phong, chi_so_dien_moi, chi_so_nuoc_moi, han_dong_tien } = req.body;
-  
-  if (!ma_phong || !chi_so_dien_moi || !chi_so_nuoc_moi || !han_dong_tien) {
-    return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
+// Lấy chỉ số điện mới & nước mới gần nhất của phòng
+exports.getLatestMeterIndexesByRoom = async (req, res) => {
+  // parseInt cho chắc, vì route params luôn là string
+  const ma_phong = parseInt(req.params.roomId, 10); // đổi lại cho đúng tên params ở route
+
+  if (isNaN(ma_phong)) {
+    return res.status(400).json({ message: 'Mã phòng không hợp lệ' });
   }
-  
+
   try {
-    // Kiểm tra xem phòng có tồn tại không
+    // Kiểm tra phòng tồn tại không
     const room = await Phong.getPhongByMaPhong(ma_phong);
-    
     if (!room) {
       return res.status(404).json({ message: 'Không tìm thấy phòng' });
     }
-    
-    // Kiểm tra xem phòng đã có hóa đơn trong tháng hiện tại chưa
-    const currentDate = new Date();
-    
-    // Lấy tháng và năm từ ngày hạn đóng tiền
-    const hanDongTienDate = new Date(han_dong_tien);
-    const month = hanDongTienDate.getMonth() + 1; // Tháng trong JavaScript bắt đầu từ 0
-    const year = hanDongTienDate.getFullYear();
-    
-    console.log(`Đang kiểm tra hóa đơn cho phòng ${ma_phong} trong tháng ${month}/${year} của hạn đóng tiền`);
-    
-    // Kiểm tra hóa đơn theo tháng/năm của hạn đóng tiền
-    const hasInvoiceInMonth = await HoaDon.checkExistInvoiceInMonth(ma_phong, month, year);
-    console.log(`Kết quả kiểm tra: ${hasInvoiceInMonth ? 'Đã có hóa đơn' : 'Chưa có hóa đơn'}`);
-    
-    if (hasInvoiceInMonth) {
-      return res.status(400).json({ message: `Phòng này đã có hóa đơn trong tháng ${month}/${year}` });
+    const lastMeter = await HoaDon.getLatestChiSoMoiByPhongId(ma_phong);
+    if (!lastMeter) {
+      return res.status(404).json({ message: 'Chưa có hóa đơn nào cho phòng này' });
     }
-    
-    // Lấy chỉ số cũ từ hóa đơn gần nhất
-    const lastInvoiceQuery = `
-      SELECT chi_so_dien_moi, chi_so_nuoc_moi
-      FROM hoa_don
-      WHERE ma_phong = $1
-      ORDER BY ma_hoa_don DESC
-      LIMIT 1
-    `;
-    const lastInvoiceResult = await pool.query(lastInvoiceQuery, [ma_phong]);
-    
-    // Nếu có hóa đơn trước đó, kiểm tra chỉ số mới có lớn hơn chỉ số cũ không
-    if (lastInvoiceResult.rows.length > 0) {
-      const lastInvoice = lastInvoiceResult.rows[0];
-      const chi_so_dien_cu = lastInvoice.chi_so_dien_moi || 0;
-      const chi_so_nuoc_cu = lastInvoice.chi_so_nuoc_moi || 0;
-      
-      if (chi_so_dien_moi < chi_so_dien_cu) {
-        return res.status(400).json({ 
-          message: 'Chỉ số điện mới phải lớn hơn hoặc bằng chỉ số cũ', 
-          chi_so_dien_cu, 
-          chi_so_dien_moi 
-        });
-      }
-      
-      if (chi_so_nuoc_moi < chi_so_nuoc_cu) {
-        return res.status(400).json({ 
-          message: 'Chỉ số nước mới phải lớn hơn hoặc bằng chỉ số cũ', 
-          chi_so_nuoc_cu, 
-          chi_so_nuoc_moi 
-        });
-      }
-    }
-    
-    const newInvoice = await HoaDon.createAutomaticInvoice(ma_phong, chi_so_dien_moi, chi_so_nuoc_moi, han_dong_tien);
-    
-    // Kiểm tra nếu chỉ số không thay đổi (không tiêu thụ)
-    if (newInvoice.so_dien === 0 && newInvoice.so_nuoc === 0) {
-      console.log('Cảnh báo: Không có tiêu thụ điện và nước trong kỳ này.');
-    }
-    
-    // Tự động tạo thông báo hóa đơn mới
-    const hanDongTien = new Date(han_dong_tien).toLocaleDateString('vi-VN');
-    const noiDungThongBao = `Hóa đơn mới tự động: Phòng ${ma_phong} có hóa đơn ${formatCurrency(newInvoice.tong_tien)}đ, hạn đóng tiền ${hanDongTien}`;
-    
-    // Lấy mã dãy từ phòng
-    const ma_day = room.ma_day;
-    
-    // Tạo thông báo
-    await Notification.create({
-      ma_day,
-      ma_phong,
-      noi_dung: noiDungThongBao
-    });
-    
-    // Tạo thông báo riêng cho hóa đơn
-    await ThongBaoHoaDon.create({
-      ma_hoa_don: newInvoice.ma_hoa_don,
-      noi_dung: noiDungThongBao
-    });
-    
-    res.status(201).json({
-      message: 'Tạo hóa đơn tự động và thông báo thành công',
-      invoice: newInvoice
-    });
+    res.status(200).json(lastMeter);
   } catch (err) {
-    console.error('Lỗi khi tạo hóa đơn tự động:', err);
+    console.error('Lỗi khi lấy chỉ số điện nước mới nhất:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
