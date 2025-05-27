@@ -158,7 +158,7 @@ async getWaterProfitByDayAndMonth(ma_day, month, year) {
 },
 
   // 8. Lấy tiền điện từng tháng theo mã phòng, có điều kiện tháng và năm
-async getElectricMoneyByMonthAndRoom(ma_phong, month, year) {
+async getElectricMoneyByRoomAndRange(ma_phong, fromMonth, fromYear, toMonth, toYear) {
   const query = `
     SELECT 
       ma_phong,
@@ -167,17 +167,17 @@ async getElectricMoneyByMonthAndRoom(ma_phong, month, year) {
       SUM(so_dien * 3500) AS electric_money
     FROM hoa_don
     WHERE ma_phong = $1
-      AND EXTRACT(MONTH FROM thang_nam) = $2
-      AND EXTRACT(YEAR FROM thang_nam) = $3
+      AND (EXTRACT(YEAR FROM thang_nam) * 100 + EXTRACT(MONTH FROM thang_nam)) 
+          BETWEEN ($2 * 100 + $3) AND ($4 * 100 + $5)
     GROUP BY ma_phong, month, year
     ORDER BY year, month;
   `;
-  const result = await db.query(query, [ma_phong, month, year]);
+  const result = await db.query(query, [ma_phong, fromYear, fromMonth, toYear, toMonth]);
   return result.rows;
-},
+}
+,
 
-// 9. Lấy tiền nước từng tháng theo mã phòng, có điều kiện tháng và năm
-async getWaterMoneyByMonthAndRoom(ma_phong, month, year) {
+async getWaterMoneyByRoomAndRange(ma_phong, fromMonth, fromYear, toMonth, toYear) {
   const query = `
     SELECT 
       ma_phong,
@@ -186,12 +186,13 @@ async getWaterMoneyByMonthAndRoom(ma_phong, month, year) {
       SUM(so_nuoc * 17000) AS water_money
     FROM hoa_don
     WHERE ma_phong = $1
-      AND EXTRACT(MONTH FROM thang_nam) = $2
-      AND EXTRACT(YEAR FROM thang_nam) = $3
-    GROUP BY ma_phong, month, year
+      AND (EXTRACT(YEAR FROM thang_nam) * 100 + EXTRACT(MONTH FROM thang_nam)) 
+          BETWEEN ($2 * 100 + $3) AND ($4 * 100 + $5)
+    GROUP BY year, month
     ORDER BY year, month;
   `;
-  const result = await db.query(query, [ma_phong, month, year]);
+
+  const result = await db.query(query, [ma_phong, fromYear, fromMonth, toYear, toMonth]);
   return result.rows;
 },
 

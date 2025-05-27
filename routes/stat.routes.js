@@ -26,10 +26,10 @@ router.get('/electric-profit/:ma_day/:month/:year', thongKeController.getElectri
 router.get('/water-profit/:ma_day/:month/:year', thongKeController.getWaterProfitByDayAndMonth);
 
 // 8. Tiền điện theo tháng và phòng
-router.get('/electric-money/:ma_phong/:month/:year', thongKeController.getElectricMoneyByMonthAndRoom);
+router.get('/electric-money/:ma_phong/:fromMonth/:fromYear/:toMonth/:toYear', thongKeController.getElectricMoneyByMonthAndRoom);
 
 // 9. Tiền nước theo tháng và phòng
-router.get('/water-money/:ma_phong/:month/:year', thongKeController.getWaterMoneyByMonthAndRoom);
+router.get('/water-money/:ma_phong/:fromMonth/:fromYear/:toMonth/:toYear', thongKeController.getWaterMoneyByMonthAndRoom);
 
 // 10. Tháng có tiền điện cao nhất theo phòng
 router.get('/max-electric-month/:ma_phong', thongKeController.getMaxElectricMonthByRoom);

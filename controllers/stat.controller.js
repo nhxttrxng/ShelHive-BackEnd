@@ -89,27 +89,39 @@ const thongKeController = {
 
   // 8. Tiền điện theo tháng và phòng
   getElectricMoneyByMonthAndRoom: async (req, res) => {
-    try {
-      const { ma_phong, month, year } = req.params;
-      const data = await ThongKe.getElectricMoneyByMonthAndRoom(ma_phong, parseInt(month), parseInt(year));
-      res.json(data);
-    } catch (error) {
-      console.error('Error getElectricMoneyByMonthAndRoom:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
+  try {
+    const { ma_phong, fromMonth, fromYear, toMonth, toYear } = req.params;
+    const data = await ThongKe.getElectricMoneyByRoomAndRange(
+      ma_phong,
+      parseInt(fromMonth, 10),
+      parseInt(fromYear, 10),
+      parseInt(toMonth, 10),
+      parseInt(toYear, 10)
+    );
+    res.json(data);
+  } catch (error) {
+    console.error('Error getElectricMoneyByRoomAndRange:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+},
 
-  // 9. Tiền nước theo tháng và phòng
-  getWaterMoneyByMonthAndRoom: async (req, res) => {
-    try {
-      const { ma_phong, month, year } = req.params;
-      const data = await ThongKe.getWaterMoneyByMonthAndRoom(ma_phong, parseInt(month), parseInt(year));
-      res.json(data);
-    } catch (error) {
-      console.error('Error getWaterMoneyByMonthAndRoom:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
+// 9. Tiền nước theo tháng và phòng
+getWaterMoneyByMonthAndRoom: async (req, res) => {
+  try {
+    const { ma_phong, fromMonth, fromYear, toMonth, toYear } = req.params;
+    const data = await ThongKe.getWaterMoneyByRoomAndRange(
+      ma_phong,
+      parseInt(fromMonth, 10),
+      parseInt(fromYear, 10),
+      parseInt(toMonth, 10),
+      parseInt(toYear, 10)
+    );
+    res.json(data);
+  } catch (error) {
+    console.error('Error getWaterMoneyByRoomAndRange:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+},
 
   // 10. Tháng có tiền điện cao nhất theo phòng
   getMaxElectricMonthByRoom: async (req, res) => {
