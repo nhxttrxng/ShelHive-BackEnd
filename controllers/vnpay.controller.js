@@ -20,7 +20,7 @@ exports.createPayment = async (req, res) => {
     const vnp_OrderInfo = orderInfo
         ? orderInfo.replace(/[^\w\d]/g, '_').slice(0, 200)
         : `Thanh_toan_hoa_don_${vnp_TxnRef}`;
-    const vnp_Amount = Math.round(Number(amount) * 100);
+    const vnp_Amount = amount;
 
     // Dùng giờ Việt Nam
     const nowVN = moment().tz('Asia/Ho_Chi_Minh');
