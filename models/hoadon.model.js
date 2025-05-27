@@ -142,7 +142,12 @@ HoaDon.approveExtension = async (id) => {
 
 // Xóa hóa đơn
 HoaDon.deleteHoaDon = async (id) => {
-  const result = await pool.query(`DELETE FROM hoa_don WHERE ma_hoa_don=$1 RETURNING *`, [id]);
+  // Xoá thông báo liên quan
+  await pool.query('DELETE FROM thong_bao_hoa_don WHERE ma_hoa_don = $1', [id]);
+  // Xoá gia hạn liên quan
+  await pool.query('DELETE FROM gia_han WHERE ma_hoa_don = $1', [id]);
+  // Xoá hoá đơn
+  const result = await pool.query('DELETE FROM hoa_don WHERE ma_hoa_don = $1 RETURNING *', [id]);
   return result.rows[0];
 };
 
