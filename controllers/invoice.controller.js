@@ -497,41 +497,26 @@ exports.approveExtension = async (req, res) => {
 // Xóa hóa đơn
 exports.deleteInvoice = async (req, res) => {
   const { id } = req.params;
-  
   try {
-    // Kiểm tra xem hóa đơn có tồn tại không
+    // Kiểm tra tồn tại hóa đơn
     const invoice = await HoaDon.getHoaDonById(id);
-    
     if (!invoice) {
       return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
     }
-    
+
+    // Chỉ cần gọi 1 lệnh này (model đã xử lý tất cả)
     const deletedInvoice = await HoaDon.deleteHoaDon(id);
-    
-    // Tạo thông báo về việc xóa hóa đơn
-    const room = await Phong.getPhongByMaPhong(invoice.ma_phong);
-    if (room) {
-      const ma_day = room.ma_day;
-      const ma_phong = invoice.ma_phong;
-      const noiDungThongBao = `Hóa đơn phòng ${ma_phong} với tổng tiền ${formatCurrency(invoice.tong_tien)}đ đã bị xóa.`;
-      
-      // Tạo thông báo
-      await Notification.create({
-        ma_day,
-        ma_phong,
-        noi_dung: noiDungThongBao
-      });
-    }
-    
-    res.status(200).json({ 
-      message: 'Xóa hóa đơn thành công', 
-      data: deletedInvoice 
+
+    res.status(200).json({
+      message: 'Xóa hóa đơn thành công',
+      data: deletedInvoice
     });
   } catch (err) {
     console.error('Lỗi khi xóa hóa đơn:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
 
 // Lấy thống kê hóa đơn theo tháng
 exports.getMonthlyStats = async (req, res) => {
