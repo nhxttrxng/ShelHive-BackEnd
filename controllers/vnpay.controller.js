@@ -2,6 +2,7 @@ const { VNPay, ProductCode, VnpLocale, dateFormat } = require('vnpay');
 const qs = require('qs');
 const crypto = require('crypto');
 const pool = require('../db/postgres');
+const moment = require('moment-timezone');
 
 // Khởi tạo cấu hình
 const vnpay = new VNPay({
@@ -15,38 +16,32 @@ const vnpay = new VNPay({
 // Tạo link thanh toán
 exports.createPayment = async (req, res) => {
     const { amount, ma_hoa_don, orderInfo, returnUrl } = req.body;
-
     const vnp_TxnRef = ma_hoa_don ? String(ma_hoa_don) : Date.now().toString();
     const vnp_OrderInfo = orderInfo
         ? orderInfo.replace(/[^\w\d]/g, '_').slice(0, 200)
         : `Thanh_toan_hoa_don_${vnp_TxnRef}`;
-    const vnp_Amount = Number(amount);
+    const vnp_Amount = Math.round(Number(amount) * 100);
+
+    // Dùng giờ Việt Nam
+    const nowVN = moment().tz('Asia/Ho_Chi_Minh');
+    const expireVN = nowVN.clone().add(15, 'minutes');
 
     const vnp_ReturnUrl = returnUrl || 'http://221.132.33.173:3000/api/vnpay/return';
-    const expire = new Date(Date.now() + 15 * 60 * 1000);
 
     const vnpayResponse = await vnpay.buildPaymentUrl({
-        vnp_Amount: vnp_Amount * 100,
+        vnp_Amount: vnp_Amount,
         vnp_IpAddr: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1',
         vnp_TxnRef: vnp_TxnRef,
         vnp_OrderInfo: vnp_OrderInfo,
         vnp_OrderType: ProductCode.Other,
         vnp_ReturnUrl: vnp_ReturnUrl,
         vnp_Locale: VnpLocale.VN,
-        vnp_CreateDate: dateFormat(new Date()),
-        vnp_ExpireDate: dateFormat(expire),
+        vnp_CreateDate: nowVN.format('YYYYMMDDHHmmss'),
+        vnp_ExpireDate: expireVN.format('YYYYMMDDHHmmss'),
     });
 
-    return res.status(200).json(vnpayResponse);
+    return res.status(200).send(typeof vnpayResponse === "string" ? vnpayResponse : JSON.stringify(vnpayResponse));
 };
-
-// Hàm sortObject
-function sortObject(obj) {
-    return Object.keys(obj).sort().reduce((result, key) => {
-        result[key] = obj[key];
-        return result;
-    }, {});
-}
 
 // Xử lý returnUrl
 exports.returnUrl = async (req, res) => {
