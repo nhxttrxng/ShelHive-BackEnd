@@ -112,13 +112,37 @@ async getUnpaidRoomCountByDayAndMonth(ma_day, month, year) {
 },
 
 // 6. Thống kê tiền lời điện theo dãy theo tháng và năm
-async getElectricProfitByDayAndMonth(ma_day, month, year) {
+async getElectricProfitByDayAndRange(ma_day, fromMonth, fromYear, toMonth, toYear) {
   const query = `
     SELECT 
       d.ma_day,
       EXTRACT(MONTH FROM hd.thang_nam) AS month,
       EXTRACT(YEAR FROM hd.thang_nam) AS year,
-      SUM(hd.so_dien * (3500 - dt.gia_dien)) AS electric_profit
+      SUM(hd.so_dien * (3500 - 2649)) AS electric_profit
+    FROM hoa_don hd
+    JOIN phong p ON hd.ma_phong = p.ma_phong
+    JOIN day_tro d ON p.ma_day = d.ma_day
+    JOIN day_tro dt ON p.ma_day = dt.ma_day
+    WHERE hd.trang_thai = 'đã thanh toán'
+      AND d.ma_day = $1
+      AND (EXTRACT(YEAR FROM hd.thang_nam) * 100 + EXTRACT(MONTH FROM hd.thang_nam))
+          BETWEEN ($2 * 100 + $3) AND ($4 * 100 + $5)
+    GROUP BY d.ma_day, month, year
+    ORDER BY year, month;
+  `;
+  const result = await db.query(query, [ma_day, fromYear, fromMonth, toYear, toMonth]);
+  return result.rows;
+},
+
+
+// 7. Thống kê tiền lời nước theo dãy theo tháng và năm
+async getWaterProfitByDayAndMonth(ma_day, month, year) {
+  const query = `
+    SELECT 
+      d.ma_day,
+      EXTRACT(MONTH FROM hd.thang_nam) AS month,
+      EXTRACT(YEAR FROM hd.thang_nam) AS year,
+      SUM(hd.so_nuoc * (17000 - 15929)) AS water_profit
     FROM hoa_don hd
     JOIN phong p ON hd.ma_phong = p.ma_phong
     JOIN day_tro d ON p.ma_day = d.ma_day
@@ -134,31 +158,8 @@ async getElectricProfitByDayAndMonth(ma_day, month, year) {
   return result.rows;
 },
 
-// 7. Thống kê tiền lời nước theo dãy theo tháng và năm
-async getWaterProfitByDayAndMonth(ma_day, month, year) {
-  const query = `
-    SELECT 
-      d.ma_day,
-      EXTRACT(MONTH FROM hd.thang_nam) AS month,
-      EXTRACT(YEAR FROM hd.thang_nam) AS year,
-      SUM(hd.so_nuoc * (17000 - dt.gia_nuoc)) AS water_profit
-    FROM hoa_don hd
-    JOIN phong p ON hd.ma_phong = p.ma_phong
-    JOIN day_tro d ON p.ma_day = d.ma_day
-    JOIN day_tro dt ON p.ma_day = dt.ma_day
-    WHERE hd.trang_thai = 'paid' 
-      AND d.ma_day = $1
-      AND EXTRACT(MONTH FROM hd.thang_nam) = $2
-      AND EXTRACT(YEAR FROM hd.thang_nam) = $3
-    GROUP BY d.ma_day, month, year
-    ORDER BY year, month;
-  `;
-  const result = await db.query(query, [ma_day, month, year]);
-  return result.rows;
-},
-
   // 8. Lấy tiền điện từng tháng theo mã phòng, có điều kiện tháng và năm
-async getElectricMoneyByMonthAndRoom(ma_phong, month, year) {
+async getElectricMoneyByRoomAndRange(ma_phong, fromMonth, fromYear, toMonth, toYear) {
   const query = `
     SELECT 
       ma_phong,
@@ -167,17 +168,17 @@ async getElectricMoneyByMonthAndRoom(ma_phong, month, year) {
       SUM(so_dien * 3500) AS electric_money
     FROM hoa_don
     WHERE ma_phong = $1
-      AND EXTRACT(MONTH FROM thang_nam) = $2
-      AND EXTRACT(YEAR FROM thang_nam) = $3
+      AND (EXTRACT(YEAR FROM thang_nam) * 100 + EXTRACT(MONTH FROM thang_nam)) 
+          BETWEEN ($2 * 100 + $3) AND ($4 * 100 + $5)
     GROUP BY ma_phong, month, year
     ORDER BY year, month;
   `;
-  const result = await db.query(query, [ma_phong, month, year]);
+  const result = await db.query(query, [ma_phong, fromYear, fromMonth, toYear, toMonth]);
   return result.rows;
-},
+}
+,
 
-// 9. Lấy tiền nước từng tháng theo mã phòng, có điều kiện tháng và năm
-async getWaterMoneyByMonthAndRoom(ma_phong, month, year) {
+async getWaterMoneyByRoomAndRange(ma_phong, fromMonth, fromYear, toMonth, toYear) {
   const query = `
     SELECT 
       ma_phong,
@@ -186,12 +187,13 @@ async getWaterMoneyByMonthAndRoom(ma_phong, month, year) {
       SUM(so_nuoc * 17000) AS water_money
     FROM hoa_don
     WHERE ma_phong = $1
-      AND EXTRACT(MONTH FROM thang_nam) = $2
-      AND EXTRACT(YEAR FROM thang_nam) = $3
-    GROUP BY ma_phong, month, year
+      AND (EXTRACT(YEAR FROM thang_nam) * 100 + EXTRACT(MONTH FROM thang_nam)) 
+          BETWEEN ($2 * 100 + $3) AND ($4 * 100 + $5)
+    GROUP BY year, month
     ORDER BY year, month;
   `;
-  const result = await db.query(query, [ma_phong, month, year]);
+
+  const result = await db.query(query, [ma_phong, fromYear, fromMonth, toYear, toMonth]);
   return result.rows;
 },
 
