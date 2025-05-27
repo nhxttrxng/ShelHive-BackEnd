@@ -115,7 +115,9 @@ exports.createInvoice = async (req, res) => {
     chi_so_dien_moi, 
     chi_so_nuoc_cu,   // Có thể null/undefined
     chi_so_nuoc_moi, 
-    tien_phong,
+    tien_phong,       // Có thể truyền 0 nếu bỏ chọn
+    tien_dien,        // Có thể truyền 0 nếu bỏ chọn
+    tien_nuoc,        // Có thể truyền 0 nếu bỏ chọn
     han_dong_tien,
     thang_nam 
   } = req.body;
@@ -158,10 +160,10 @@ exports.createInvoice = async (req, res) => {
       }
     }
 
-    // Lấy giá điện, nước của dãy trọ
+    // Lấy giá điện, nước của dãy trọ để tính mặc định nếu không truyền từ FE
     const dayTro = await DayTro.getDayTroByMaDay(room.ma_day);
 
-    // Tính số lượng tiêu thụ và tiền điện, nước
+    // Tính số lượng tiêu thụ
     const so_dien = chi_so_dien_moi - cs_dien_cu;
     const so_nuoc = chi_so_nuoc_moi - cs_nuoc_cu;
 
@@ -175,15 +177,22 @@ exports.createInvoice = async (req, res) => {
       });
     }
 
-    const tien_dien = so_dien * dayTro.gia_dien;
-    const tien_nuoc = so_nuoc * dayTro.gia_nuoc;
+    // Nếu FE truyền lên đã có tiền điện/nước/phòng thì dùng luôn; nếu không, BE tự tính
+    let tien_dien_final;
+    if (typeof tien_dien === 'number') tien_dien_final = tien_dien;
+    else tien_dien_final = so_dien * dayTro.gia_dien;
 
-    // Giá phòng mặc định là 1,100,000 đồng nếu không có
+    let tien_nuoc_final;
+    if (typeof tien_nuoc === 'number') tien_nuoc_final = tien_nuoc;
+    else tien_nuoc_final = so_nuoc * dayTro.gia_nuoc;
+
     const DEFAULT_ROOM_PRICE = 1100000.00;
-    const tien_phong_final = tien_phong || (room.gia_thue && room.gia_thue > 0 ? room.gia_thue : DEFAULT_ROOM_PRICE);
+    let tien_phong_final;
+    if (typeof tien_phong === 'number') tien_phong_final = tien_phong;
+    else tien_phong_final = (room.gia_thue && room.gia_thue > 0 ? room.gia_thue : DEFAULT_ROOM_PRICE);
 
-    // Tính tổng tiền
-    const tong_tien = tien_dien + tien_nuoc + tien_phong_final;
+    // Tổng tiền
+    const tong_tien = tien_dien_final + tien_nuoc_final + tien_phong_final;
 
     // Tạo hóa đơn
     const newInvoice = await HoaDon.addHoaDon({
@@ -195,8 +204,8 @@ exports.createInvoice = async (req, res) => {
       chi_so_dien_moi,
       chi_so_nuoc_cu: cs_nuoc_cu,
       chi_so_nuoc_moi,
-      tien_dien,
-      tien_nuoc,
+      tien_dien: tien_dien_final,
+      tien_nuoc: tien_nuoc_final,
       tien_phong: tien_phong_final,
       han_dong_tien,
       trang_thai: 'chưa thanh toán',
@@ -204,14 +213,14 @@ exports.createInvoice = async (req, res) => {
       thang_nam
     });
 
-    // Tạo thông báo hóa đơn mới (chỉ gồm 3 trường: mã, nội dung, ngày tạo)
+    // Tạo thông báo hóa đơn mới
     const hanDongTien = new Date(han_dong_tien).toLocaleDateString('vi-VN');
     const noiDungThongBao = `Hóa đơn mới: Phòng ${ma_phong} có hóa đơn ${formatCurrency(tong_tien)}đ, hạn đóng tiền ${hanDongTien}`;
 
     await ThongBaoHoaDon.createNotification({
       ma_hoa_don: newInvoice.ma_hoa_don,
       noi_dung: noiDungThongBao,
-      ngay_tao: new Date() // Bổ sung ngày tạo
+      ngay_tao: new Date()
     });
 
     res.status(201).json({
