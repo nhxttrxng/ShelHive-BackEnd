@@ -292,19 +292,34 @@ exports.updateInvoiceStatus = async (req, res) => {
     if (trang_thai === 'đã thanh toán') {
       const room = await Phong.getPhongByMaPhong(invoice.ma_phong);
       if (room) {
-        const ma_day = room.ma_day;
-        const ma_phong = invoice.ma_phong;
-        const noiDungThongBao = `Hóa đơn phòng ${ma_phong} đã được thanh toán thành công.`;
-        
-        // Tạo thông báo
-        await Notification.create({
-          ma_day,
-          ma_phong,
-          noi_dung: noiDungThongBao
+        // Lấy 2 số cuối mã phòng
+        const ma_phong = invoice.ma_phong?.toString() || '';
+        const ma_phong_short = ma_phong.length > 2 ? ma_phong.slice(-2) : ma_phong;
+
+        // Format tháng_năm từ Date hoặc ISO string -> mm/yyyy
+        let thangNam = '';
+        if (invoice.thang_nam) {
+          let dateObj = invoice.thang_nam;
+          if (!(dateObj instanceof Date)) {
+            dateObj = new Date(dateObj);
+          }
+          // Nếu chuyển được sang date hợp lệ
+          if (!isNaN(dateObj.getTime())) {
+            const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+            const year = dateObj.getFullYear();
+            thangNam = `${month}/${year}`;
+          }
+        }
+
+        const noiDungThongBao = `Hóa đơn ${thangNam} của phòng ${ma_phong_short} đã được thanh toán thành công.`;
+
+        await ThongBaoHoaDon.createNotification({
+          ma_hoa_don: invoice.ma_hoa_don,
+          noi_dung: noiDungThongBao,
+          ngay_tao: new Date()
         });
       }
     }
-    
     res.status(200).json({
       message: 'Cập nhật trạng thái hóa đơn thành công',
       invoice: updatedInvoice

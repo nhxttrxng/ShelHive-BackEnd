@@ -60,24 +60,34 @@ exports.returnUrl = async (req, res) => {
         .update(signData, 'utf-8')
         .digest('hex');
 
-    if (secureHash !== hash) return res.status(400).send('Chuỗi hash không hợp lệ!');
+    // Nếu hash không đúng, thông báo luôn
+    if (secureHash !== hash) return res.status(400).json({ message: 'Chuỗi hash không hợp lệ!' });
 
+    // Lấy trạng thái thanh toán
+    let paymentStatus = 'fail';
     if (params.vnp_ResponseCode === '00') {
-        const ma_hoa_don = params.vnp_TxnRef;
-        try {
-            await pool.query(
-                `UPDATE hoa_don 
-                 SET trang_thai = 'Đã thanh toán', ngay_thanh_toan = NOW() 
-                 WHERE ma_hoa_don = $1`,
-                [ma_hoa_don]
-            );
-            res.send('Thanh toán thành công!');
-        } catch (err) {
-            console.error(err);
-            res.status(500).send('Thanh toán thành công nhưng lỗi cập nhật hóa đơn!');
-        }
-    } else {
-        res.status(400).send('Thanh toán không thành công!');
+        paymentStatus = 'success';
+        // Không update DB ở đây nữa, cho app update qua API riêng!
     }
+
+    const billId = params.vnp_TxnRef || '';
+    const deeplinkUrl = `shelhive://vnpay_return?status=${paymentStatus}&bill_id=${billId}`;
+
+    // Trả về JSON deeplink
+    return res.json({
+        deeplink: deeplinkUrl,
+        status: paymentStatus,
+        bill_id: billId
+    });
 };
 
+exports.testReturnUrl = async (req, res) => {
+    const billId = req.query.bill_id || '123456';
+    const status = req.query.status || 'success';
+    const deeplinkUrl = `shelhive://vnpay_return?status=${status}&bill_id=${billId}`;
+    return res.json({
+        deeplink: deeplinkUrl,
+        status: status,
+        bill_id: billId
+    });
+};
