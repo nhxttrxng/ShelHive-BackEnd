@@ -8,6 +8,6 @@ router.get('/', motel.getAll);
 router.get('/:email_admin', motel.getByEmailAdmin);
 router.put('/:ma_day', motel.update);
 router.delete('/:ma_day', motel.delete);
-router.get('/:ma_day', motel.getByMaDay);
+router.get('/day/:ma_day', motel.getByMaDay);
 
 module.exports = router;
