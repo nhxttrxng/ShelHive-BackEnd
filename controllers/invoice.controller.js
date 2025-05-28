@@ -236,65 +236,43 @@ exports.createInvoice = async (req, res) => {
 // Cập nhật hóa đơn
 exports.updateInvoice = async (req, res) => {
   const { id } = req.params;
-  const { ma_phong, tong_tien, so_dien, so_nuoc, han_dong_tien, trang_thai } = req.body;
-  
+  const {
+    chi_so_dien_moi,
+    chi_so_nuoc_moi,
+    tien_dien,
+    tien_nuoc,
+    so_dien,
+    so_nuoc,
+    tien_phong,
+    tong_tien
+  } = req.body;
+
   try {
-    // Tạm thời bỏ kiểm tra quyền admin
-    /* if (!req.user || !req.user.is_admin) {
-      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa hóa đơn, chỉ admin mới được phép' });
-    } */
-    
-    // Kiểm tra xem hóa đơn có tồn tại không
+    // Lấy hóa đơn hiện tại từ DB
     const invoice = await HoaDon.getHoaDonById(id);
-    
     if (!invoice) {
       return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
     }
-    
-    // Nếu có thay đổi phòng, kiểm tra phòng mới có tồn tại không
-    if (ma_phong && ma_phong !== invoice.ma_phong) {
-      const room = await Phong.getPhongByMaPhong(ma_phong);
-      
-      if (!room) {
-        return res.status(404).json({ message: 'Không tìm thấy phòng' });
-      }
-    }
-    
+
+    // Update chỉ những trường vợ muốn, các trường còn lại giữ nguyên
     const updatedInvoice = await HoaDon.updateHoaDon(id, {
-      ma_phong: ma_phong || invoice.ma_phong,
-      tong_tien: tong_tien || invoice.tong_tien,
-      so_dien: so_dien || invoice.so_dien,
-      so_nuoc: so_nuoc || invoice.so_nuoc,
-      han_dong_tien: han_dong_tien || invoice.han_dong_tien,
-      trang_thai: trang_thai || invoice.trang_thai
+      ma_phong: invoice.ma_phong,
+      tong_tien: tong_tien !== undefined ? tong_tien : invoice.tong_tien,
+      so_dien: so_dien !== undefined ? so_dien : invoice.so_dien,
+      so_nuoc: so_nuoc !== undefined ? so_nuoc : invoice.so_nuoc,
+      han_dong_tien: invoice.han_dong_tien,
+      trang_thai: invoice.trang_thai,
+      chi_so_dien_cu: invoice.chi_so_dien_cu,
+      chi_so_dien_moi: chi_so_dien_moi !== undefined ? chi_so_dien_moi : invoice.chi_so_dien_moi,
+      chi_so_nuoc_cu: invoice.chi_so_nuoc_cu,
+      chi_so_nuoc_moi: chi_so_nuoc_moi !== undefined ? chi_so_nuoc_moi : invoice.chi_so_nuoc_moi,
+      tien_dien: tien_dien !== undefined ? tien_dien : invoice.tien_dien,
+      tien_nuoc: tien_nuoc !== undefined ? tien_nuoc : invoice.tien_nuoc,
+      tien_phong: tien_phong !== undefined ? tien_phong : invoice.tien_phong,
+      thang_nam: invoice.thang_nam,
+      ngay_thanh_toan: invoice.ngay_thanh_toan,
     });
-    
-    // Tạo thông báo về việc cập nhật hóa đơn
-    const currentMaPhong = ma_phong || invoice.ma_phong;
-    const room = await Phong.getPhongByMaPhong(currentMaPhong);
-    
-    if (room) {
-      const ma_day = room.ma_day;
-      let noiDungThongBao = `Hóa đơn phòng ${currentMaPhong} đã được cập nhật.`;
-      
-      // Thêm chi tiết về những thay đổi quan trọng
-      if (tong_tien && tong_tien !== invoice.tong_tien) {
-        noiDungThongBao += ` Tổng tiền mới: ${formatCurrency(tong_tien)}đ.`;
-      }
-      
-      if (han_dong_tien && han_dong_tien !== invoice.han_dong_tien) {
-        const hanMoi = new Date(han_dong_tien).toLocaleDateString('vi-VN');
-        noiDungThongBao += ` Hạn đóng tiền mới: ${hanMoi}.`;
-      }
-      
-      // Tạo thông báo
-      await Notification.create({
-        ma_day,
-        ma_phong: currentMaPhong,
-        noi_dung: noiDungThongBao
-      });
-    }
-    
+
     res.status(200).json({
       message: 'Cập nhật hóa đơn thành công',
       invoice: updatedInvoice
