@@ -255,7 +255,7 @@ exports.updateInvoice = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
     }
 
-    // Update chỉ những trường vợ muốn, các trường còn lại giữ nguyên
+    // Update chỉ những trường bạn muốn, các trường còn lại giữ nguyên
     const updatedInvoice = await HoaDon.updateHoaDon(id, {
       ma_phong: invoice.ma_phong,
       tong_tien: tong_tien !== undefined ? tong_tien : invoice.tong_tien,
@@ -342,134 +342,6 @@ exports.updateInvoiceStatus = async (req, res) => {
     });
   } catch (err) {
     console.error('Lỗi khi cập nhật trạng thái hóa đơn:', err);
-    res.status(500).json({ message: 'Lỗi server', error: err.message });
-  }
-};
-
-// Yêu cầu gia hạn hóa đơn
-exports.requestExtension = async (req, res) => {
-  const { id } = req.params;
-  const { ngay_gia_han } = req.body;
-  
-  if (!ngay_gia_han) {
-    return res.status(400).json({ message: 'Thiếu ngày gia hạn' });
-  }
-  
-  try {
-    // Kiểm tra xem hóa đơn có tồn tại không
-    const invoice = await HoaDon.getHoaDonById(id);
-    
-    if (!invoice) {
-      return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
-    }
-    
-    // Kiểm tra nếu hóa đơn đã thanh toán
-    if (invoice.trang_thai === 'đã thanh toán') {
-      return res.status(400).json({ message: 'Hóa đơn đã thanh toán, không thể gia hạn' });
-    }
-    
-    try {
-      const updatedInvoice = await HoaDon.requestExtension(id, ngay_gia_han);
-      
-      // Tạo thông báo về yêu cầu gia hạn
-      const room = await Phong.getPhongByMaPhong(invoice.ma_phong);
-      if (room) {
-        const ma_day = room.ma_day;
-        const ma_phong = invoice.ma_phong;
-        const ngayGiaHanYeuCau = new Date(ngay_gia_han).toLocaleDateString('vi-VN');
-        const hanDongTienCu = new Date(invoice.han_dong_tien).toLocaleDateString('vi-VN');
-        
-        // Tính số ngày gia hạn dự kiến
-        const soNgayGiaHan = Math.ceil((new Date(ngay_gia_han) - new Date(invoice.han_dong_tien)) / (1000 * 60 * 60 * 24));
-        
-        // Tính tiền lãi dự kiến
-        const tienLaiDuKien = invoice.tong_tien * EXTENSION_INTEREST_RATE * soNgayGiaHan;
-        
-        const noiDungThongBao = `Đã có yêu cầu gia hạn hóa đơn phòng ${ma_phong} từ ${hanDongTienCu} đến ${ngayGiaHanYeuCau} (${soNgayGiaHan} ngày). Tiền lãi dự kiến: ${formatCurrency(tienLaiDuKien)}đ (0.5%/ngày).`;
-        
-        // Tạo thông báo
-        await Notification.create({
-          ma_day,
-          ma_phong,
-          noi_dung: noiDungThongBao
-        });
-        
-        // Tạo thông báo riêng cho hóa đơn
-        await ThongBaoHoaDon.create({
-          ma_hoa_don: id,
-          noi_dung: noiDungThongBao
-        });
-      }
-      
-      res.status(200).json({
-        message: 'Yêu cầu gia hạn thành công, đang chờ phê duyệt',
-        invoice: updatedInvoice
-      });
-    } catch (error) {
-      // Bắt các lỗi liên quan đến ngày gia hạn không hợp lệ
-      return res.status(400).json({ 
-        message: 'Yêu cầu gia hạn không hợp lệ', 
-        error: error.message 
-      });
-    }
-  } catch (err) {
-    console.error('Lỗi khi yêu cầu gia hạn hóa đơn:', err);
-    res.status(500).json({ message: 'Lỗi server', error: err.message });
-  }
-};
-
-// Duyệt gia hạn hóa đơn
-exports.approveExtension = async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    // Kiểm tra xem hóa đơn có tồn tại không
-    const invoice = await HoaDon.getHoaDonById(id);
-    
-    if (!invoice) {
-      return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
-    }
-    
-    // Kiểm tra nếu không có yêu cầu gia hạn
-    if (!invoice.ngay_gia_han) {
-      return res.status(400).json({ message: 'Không có yêu cầu gia hạn cho hóa đơn này' });
-    }
-    
-    // Kiểm tra nếu đã duyệt
-    if (invoice.da_duyet_gia_han) {
-      return res.status(400).json({ message: 'Yêu cầu gia hạn đã được duyệt trước đó' });
-    }
-    
-    const updatedInvoice = await HoaDon.approveExtension(id);
-    
-    // Tạo thông báo về việc phê duyệt gia hạn
-    const room = await Phong.getPhongByMaPhong(invoice.ma_phong);
-    if (room) {
-      const ma_day = room.ma_day;
-      const ma_phong = invoice.ma_phong;
-      const ngayGiaHanMoi = new Date(invoice.ngay_gia_han).toLocaleDateString('vi-VN');
-      
-      let noiDungThongBao = `Yêu cầu gia hạn hóa đơn phòng ${ma_phong} đã được chấp nhận. Hạn thanh toán mới: ${ngayGiaHanMoi}`;
-      
-      // Thêm thông tin về tiền lãi nếu có
-      if (updatedInvoice.tien_lai_gia_han && updatedInvoice.tien_lai_gia_han > 0) {
-        noiDungThongBao += `. Tiền lãi gia hạn: ${formatCurrency(updatedInvoice.tien_lai_gia_han)}đ (0.5%/ngày × ${updatedInvoice.so_ngay_gia_han} ngày). Tổng tiền mới: ${formatCurrency(updatedInvoice.tong_tien)}đ`;
-      }
-      
-      // Tạo thông báo
-      await Notification.create({
-        ma_day,
-        ma_phong,
-        noi_dung: noiDungThongBao
-      });
-    }
-    
-    res.status(200).json({
-      message: 'Duyệt gia hạn hóa đơn thành công',
-      invoice: updatedInvoice
-    });
-  } catch (err) {
-    console.error('Lỗi khi duyệt gia hạn hóa đơn:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };

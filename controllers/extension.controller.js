@@ -148,30 +148,30 @@ exports.updateExtension = async (req, res) => {
 // Duyệt yêu cầu gia hạn
 exports.approveExtension = async (req, res) => {
   const { id } = req.params;
-  
+
   try {
-    // Kiểm tra yêu cầu gia hạn tồn tại
+    // 1. Kiểm tra yêu cầu gia hạn tồn tại
     const extension = await GiaHan.getGiaHanById(id);
-    
+
     if (!extension) {
       return res.status(404).json({ message: 'Không tìm thấy yêu cầu gia hạn' });
     }
-    
-    // Kiểm tra trạng thái hiện tại
+
+    // 2. Kiểm tra trạng thái hiện tại
     if (extension.trang_thai !== 'chờ xác nhận') {
       return res.status(400).json({ message: `Không thể duyệt yêu cầu gia hạn với trạng thái "${extension.trang_thai}"` });
     }
-    
-    // Duyệt yêu cầu gia hạn và cập nhật hóa đơn
-    const approvedExtension = await GiaHan.approveGiaHan(id);
-    
-    res.status(200).json({
+
+    // 3. Duyệt yêu cầu gia hạn và cập nhật hóa đơn
+    const approvedBill = await GiaHan.approveGiaHan(id);
+
+    return res.status(200).json({
       message: 'Duyệt yêu cầu gia hạn thành công',
-      data: approvedExtension
+      data: approvedBill  // là hóa đơn đã được cập nhật sau khi duyệt
     });
   } catch (err) {
     console.error('Lỗi khi duyệt yêu cầu gia hạn:', err);
-    res.status(500).json({ message: 'Lỗi server', error: err.message });
+    return res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
 

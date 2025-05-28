@@ -103,25 +103,72 @@ GiaHan.updateGiaHanStatus = async (maGiaHan, trangThai) => {
 
 // Duyệt yêu cầu gia hạn và cập nhật hóa đơn
 GiaHan.approveGiaHan = async (maGiaHan) => {
-  // Thực hiện transaction để đảm bảo tính nhất quán dữ liệu
   const client = await pool.connect();
-  
   try {
     await client.query('BEGIN');
-    
-    // Lấy thông tin gia hạn
-    const giaHanQuery = `
-      SELECT * FROM gia_han 
-      WHERE ma_gia_han = $1
-    `;
+
+    // 1. Lấy thông tin gia hạn
+    const giaHanQuery = `SELECT * FROM gia_han WHERE ma_gia_han = $1`;
     const giaHanResult = await client.query(giaHanQuery, [maGiaHan]);
     const giaHan = giaHanResult.rows[0];
-    
+
     if (!giaHan) {
       throw new Error('Không tìm thấy yêu cầu gia hạn');
     }
-    
-    // Cập nhật trạng thái gia hạn thành "đã duyệt"
+
+    // 2. Lấy thông tin hóa đơn liên quan
+    const hoaDonQuery = `SELECT * FROM hoa_don WHERE ma_hoa_don = $1`;
+    const hoaDonResult = await client.query(hoaDonQuery, [giaHan.ma_hoa_don]);
+    const hoaDon = hoaDonResult.rows[0];
+
+    if (!hoaDon) {
+      throw new Error('Không tìm thấy hóa đơn liên quan');
+    }
+
+    // 3. Tính số ngày gia hạn dùng hàm đã có
+    const soNgayGiaHan = getDiffInDays(
+      new Date(giaHan.han_dong_tien_goc),
+      new Date(giaHan.han_thanh_toan_moi)
+    );
+
+    // 4. Tính lại tổng tiền mới
+    const tongTienMoi =
+      parseFloat(giaHan.tien_lai_tinh_du_kien) +
+      parseFloat(hoaDon.tien_dien || 0) +
+      parseFloat(hoaDon.tien_nuoc || 0) +
+      parseFloat(hoaDon.tien_phong || 0);
+
+    // 5. Nếu hạn đóng tiền < ngày gia hạn, cập nhật trạng thái
+    let trangThaiMoi = hoaDon.trang_thai;
+    if (new Date(hoaDon.han_dong_tien) < new Date(giaHan.han_thanh_toan_moi)) {
+      trangThaiMoi = 'chưa thanh toán';
+    }
+
+    // 6. Cập nhật hóa đơn
+    const updateHoaDonQuery = `
+      UPDATE hoa_don
+      SET 
+        han_dong_tien = $1,
+        ngay_gia_han = $1,
+        so_ngay_gia_han = $2,
+        tien_lai_gia_han = $3,
+        da_duyet_gia_han = true,
+        ngay_cap_nhat_gia_han = NOW(),
+        tong_tien = $4,
+        trang_thai = $5
+      WHERE ma_hoa_don = $6
+      RETURNING *
+    `;
+    const updateHoaDonResult = await client.query(updateHoaDonQuery, [
+      giaHan.han_thanh_toan_moi,
+      soNgayGiaHan,
+      giaHan.tien_lai_tinh_du_kien,
+      tongTienMoi,
+      trangThaiMoi,
+      giaHan.ma_hoa_don
+    ]);
+
+    // 7. Update trạng thái gia hạn thành đã duyệt
     const updateGiaHanQuery = `
       UPDATE gia_han
       SET trang_thai = 'đã duyệt'
@@ -129,19 +176,9 @@ GiaHan.approveGiaHan = async (maGiaHan) => {
       RETURNING *
     `;
     const updatedGiaHan = await client.query(updateGiaHanQuery, [maGiaHan]);
-    
-    // Cập nhật hạn đóng tiền mới cho hóa đơn
-    const updateHoaDonQuery = `
-      UPDATE hoa_don
-      SET han_dong_tien = $1,
-          da_duyet_gia_han = true
-      WHERE ma_hoa_don = $2
-      RETURNING *
-    `;
-    await client.query(updateHoaDonQuery, [giaHan.han_thanh_toan_moi, giaHan.ma_hoa_don]);
-    
+
     await client.query('COMMIT');
-    return updatedGiaHan.rows[0];
+    return updateHoaDonResult.rows[0];
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -207,7 +244,7 @@ GiaHan.calculateExpectedInterest = async (maHoaDon, hanThanhToanMoi, laiSuat) =>
     tong_tien: hoaDon.tong_tien,
     lai_suat: laiSuat,
     so_ngay_gia_han: soNgayGiaHan,
-    tien_lai_du_kien: Math.round(tienLaiDuKien * 100) / 100 // Làm tròn 2 chữ số thập phân
+    tien_lai_tinh_du_kien: Math.round(tienLaiDuKien * 100) / 100 // Làm tròn 2 chữ số thập phân
   };
 };
 
