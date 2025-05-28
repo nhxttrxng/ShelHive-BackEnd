@@ -244,7 +244,8 @@ exports.updateInvoice = async (req, res) => {
     so_dien,
     so_nuoc,
     tien_phong,
-    tong_tien
+    tong_tien,
+    tien_nuoc_final
   } = req.body;
 
   try {
@@ -271,6 +272,7 @@ exports.updateInvoice = async (req, res) => {
       tien_phong: tien_phong !== undefined ? tien_phong : invoice.tien_phong,
       thang_nam: invoice.thang_nam,
       ngay_thanh_toan: invoice.ngay_thanh_toan,
+      tien_lai_gia_han: tien_lai_gia_han !== undefined ? tien_lai_gia_han : invoice.tien_lai_gia_han
     });
 
     res.status(200).json({
