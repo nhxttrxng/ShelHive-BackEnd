@@ -89,7 +89,7 @@ exports.createExtension = async (req, res) => {
       han_thanh_toan_moi,
       trang_thai: 'chờ xác nhận',
       lai_suat,
-      tien_lai_tinh_du_kien: interestCalculation.tien_lai_du_kien
+      tien_lai_tinh_du_kien: interestCalculation.tien_lai_tinh_du_kien
     });
     
     res.status(201).json({

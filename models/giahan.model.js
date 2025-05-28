@@ -132,11 +132,16 @@ GiaHan.approveGiaHan = async (maGiaHan) => {
     );
 
     // 4. Tính lại tổng tiền mới
+    function toSafeNumber(val) {
+      const num = parseFloat(val);
+      return isNaN(num) ? 0 : num;
+    }
+
     const tongTienMoi =
-      parseFloat(giaHan.tien_lai_tinh_du_kien) +
-      parseFloat(hoaDon.tien_dien || 0) +
-      parseFloat(hoaDon.tien_nuoc || 0) +
-      parseFloat(hoaDon.tien_phong || 0);
+      toSafeNumber(giaHan.tien_lai_tinh_du_kien) +
+      toSafeNumber(hoaDon.tien_dien) +
+      toSafeNumber(hoaDon.tien_nuoc) +
+      toSafeNumber(hoaDon.tien_phong);
 
     // 5. Nếu hạn đóng tiền < ngày gia hạn, cập nhật trạng thái
     let trangThaiMoi = hoaDon.trang_thai;
@@ -144,11 +149,10 @@ GiaHan.approveGiaHan = async (maGiaHan) => {
       trangThaiMoi = 'chưa thanh toán';
     }
 
-    // 6. Cập nhật hóa đơn
+    // 6. Cập nhật hóa đơn (KHÔNG UPDATE han_dong_tien)
     const updateHoaDonQuery = `
       UPDATE hoa_don
       SET 
-        han_dong_tien = $1,
         ngay_gia_han = $1,
         so_ngay_gia_han = $2,
         tien_lai_gia_han = $3,
