@@ -195,7 +195,7 @@ GiaHan.calculateExpectedInterest = async (maHoaDon, hanThanhToanMoi, laiSuat) =>
   const soNgayGiaHan = Math.ceil((hanMoi - hanGoc) / (1000 * 60 * 60 * 24));
   
   // Tính tiền lãi dự kiến
-  const tienLaiDuKien = (hoaDon.tong_tien * (laiSuat / 100) * soNgayGiaHan) / 30; // Tính lãi theo tháng (30 ngày)
+  const tienLaiDuKien = (hoaDon.tong_tien * (laiSuat / 100) * soNgayGiaHan);
   
   return {
     tong_tien: hoaDon.tong_tien,
