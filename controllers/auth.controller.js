@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 const User = require('../models/user.model');
 const Admin = require('../models/admin.model');
 const OTP = require('../models/otp.model');
+const billService = require('../services/billService');
 
 // Đăng ký người dùng
 exports.register = async (req, res) => {
@@ -224,6 +225,7 @@ exports.checkVerify = async (req, res) => {
 // Đăng nhập
 exports.login = async (req, res) => {
   const { email, mat_khau } = req.body;
+  await billService.updateLateBills();
   
   if (!email || !mat_khau)
     return res.status(400).json({ message: 'Thiếu thông tin' });
