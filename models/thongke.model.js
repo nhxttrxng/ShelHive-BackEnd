@@ -1,41 +1,20 @@
 const db = require('../db/postgres'); // kết nối database
 
 const ThongKe = {
-// 1. Tổng tiền trọ chưa thanh toán theo dãy theo tháng và năm
-async getTotalUnpaidRentByDay(ma_day, month, year) {
+// 1. Tổng tiền trọ chưa thanh toán và đã thanh toán theo dãy theo tháng và năm
+async getRentStatsByDayMonthYear(ma_day, month, year) {
   const query = `
-    SELECT 
-      d.ma_day, 
-      EXTRACT(MONTH FROM hd.thang_nam) AS month,
-      EXTRACT(YEAR FROM hd.thang_nam) AS year,
-      SUM(hd.tien_phong) AS total_unpaid_rent
-    FROM hoa_don hd
-    JOIN phong p ON hd.ma_phong = p.ma_phong
-    JOIN day_tro d ON p.ma_day = d.ma_day
-    WHERE hd.trang_thai = 'chưa thanh toán' 
-      AND d.ma_day = $1
-      AND EXTRACT(MONTH FROM hd.thang_nam) = $2
-      AND EXTRACT(YEAR FROM hd.thang_nam) = $3
-    GROUP BY d.ma_day, month, year
-    ORDER BY year, month;
-  `;
-  const result = await db.query(query, [ma_day, month, year]);
-  return result.rows;
-},
-
-// 2. Tiền trọ đã thanh toán theo dãy theo tháng và năm
-async getPaidRentByDayAndMonth(ma_day, month, year) {
-  const query = `
-    SELECT 
+      SELECT 
       d.ma_day,
       EXTRACT(MONTH FROM hd.thang_nam) AS month,
       EXTRACT(YEAR FROM hd.thang_nam) AS year,
-      SUM(hd.tong_tien) AS total_paid_rent
+      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'đã thanh toán' THEN hd.ma_phong ELSE NULL END) AS paid_room_count,
+      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'trễ hạn' THEN hd.ma_phong ELSE NULL END) AS overdue_room_count,
+      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'chưa thanh toán' THEN hd.ma_phong ELSE NULL END) AS unpaid_room_count
     FROM hoa_don hd
     JOIN phong p ON hd.ma_phong = p.ma_phong
     JOIN day_tro d ON p.ma_day = d.ma_day
-    WHERE hd.trang_thai = 'đã thanh toán' 
-      AND d.ma_day = $1
+    WHERE d.ma_day = $1
       AND EXTRACT(MONTH FROM hd.thang_nam) = $2
       AND EXTRACT(YEAR FROM hd.thang_nam) = $3
     GROUP BY d.ma_day, month, year
@@ -46,18 +25,19 @@ async getPaidRentByDayAndMonth(ma_day, month, year) {
 },
 
 // 3. Tổng số phòng đã thanh toán theo dãy theo tháng và năm
-async getPaidRoomCountByDayAndMonth(ma_day, month, year) {
+async getRoomStatusCountByDayMonthYear(ma_day, month, year) {
   const query = `
     SELECT 
       d.ma_day,
       EXTRACT(MONTH FROM hd.thang_nam) AS month,
       EXTRACT(YEAR FROM hd.thang_nam) AS year,
-      COUNT(DISTINCT hd.ma_phong) AS paid_room_count
+      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'đã thanh toán' THEN hd.ma_phong ELSE NULL END) AS paid_room_count,
+      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'trễ hạn' THEN hd.ma_phong ELSE NULL END) AS overdue_room_count,
+      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'chưa thanh toán' THEN hd.ma_phong ELSE NULL END) AS unpaid_room_count
     FROM hoa_don hd
     JOIN phong p ON hd.ma_phong = p.ma_phong
     JOIN day_tro d ON p.ma_day = d.ma_day
-    WHERE hd.trang_thai = 'đã thanh toán' 
-      AND d.ma_day = $1
+    WHERE d.ma_day = $1
       AND EXTRACT(MONTH FROM hd.thang_nam) = $2
       AND EXTRACT(YEAR FROM hd.thang_nam) = $3
     GROUP BY d.ma_day, month, year
@@ -66,51 +46,6 @@ async getPaidRoomCountByDayAndMonth(ma_day, month, year) {
   const result = await db.query(query, [ma_day, month, year]);
   return result.rows;
 },
-
-// 4. Tổng số phòng trễ hạn theo dãy theo tháng và năm
-async getOverdueRoomCountByDayAndMonth(ma_day, month, year) {
-  const query = `
-    SELECT 
-      d.ma_day,
-      EXTRACT(MONTH FROM hd.thang_nam) AS month,
-      EXTRACT(YEAR FROM hd.thang_nam) AS year,
-      COUNT(DISTINCT hd.ma_phong) AS overdue_room_count
-    FROM hoa_don hd
-    JOIN phong p ON hd.ma_phong = p.ma_phong
-    JOIN day_tro d ON p.ma_day = d.ma_day
-    WHERE hd.trang_thai = 'trễ hạn' 
-      AND d.ma_day = $1
-      AND EXTRACT(MONTH FROM hd.thang_nam) = $2
-      AND EXTRACT(YEAR FROM hd.thang_nam) = $3
-    GROUP BY d.ma_day, month, year
-    ORDER BY year, month;
-  `;
-  const result = await db.query(query, [ma_day, month, year]);
-  return result.rows;
-},
-
-// 5. Tổng số phòng chưa đóng theo dãy theo tháng và năm
-async getUnpaidRoomCountByDayAndMonth(ma_day, month, year) {
-  const query = `
-    SELECT 
-      d.ma_day,
-      EXTRACT(MONTH FROM hd.thang_nam) AS month,
-      EXTRACT(YEAR FROM hd.thang_nam) AS year,
-      COUNT(DISTINCT hd.ma_phong) AS unpaid_room_count
-    FROM hoa_don hd
-    JOIN phong p ON hd.ma_phong = p.ma_phong
-    JOIN day_tro d ON p.ma_day = d.ma_day
-    WHERE hd.trang_thai = 'chưa thanh toán' 
-      AND d.ma_day = $1
-      AND EXTRACT(MONTH FROM hd.thang_nam) = $2
-      AND EXTRACT(YEAR FROM hd.thang_nam) = $3
-    GROUP BY d.ma_day, month, year
-    ORDER BY year, month;
-  `;
-  const result = await db.query(query, [ma_day, month, year]);
-  return result.rows;
-},
-
 // 6. Thống kê tiền lời điện theo dãy theo tháng và năm
 async getElectricProfitByDayAndRange(ma_day, fromMonth, fromYear, toMonth, toYear) {
   const query = `
@@ -136,7 +71,7 @@ async getElectricProfitByDayAndRange(ma_day, fromMonth, fromYear, toMonth, toYea
 
 
 // 7. Thống kê tiền lời nước theo dãy theo tháng và năm
-async getWaterProfitByDayAndMonth(ma_day, month, year) {
+async getWaterProfitByDayAndRange(ma_day, month, year) {
   const query = `
     SELECT 
       d.ma_day,

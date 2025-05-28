@@ -4,61 +4,25 @@ const ThongKe = require('../models/thongke.model');
 const thongKeController = {
 
   // 1. Tổng tiền trọ chưa thanh toán theo dãy, tháng, năm
-  getTotalUnpaidRentByDay: async (req, res) => {
+  getRentStatsByDayMonthYear: async (req, res) => {
     try {
       const { ma_day, month, year } = req.params;
-      const data = await ThongKe.getTotalUnpaidRentByDay(ma_day, parseInt(month), parseInt(year));
+      const data = await ThongKe.getRentStatsByDayMonthYear(ma_day, parseInt(month), parseInt(year));
       res.json(data);
     } catch (error) {
-      console.error('Error getTotalUnpaidRentByDay:', error);
+      console.error('Error getRentStatsByDayMonthYear:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   },
 
-  // 2. Tiền trọ đã thanh toán theo dãy, tháng, năm
-  getPaidRentByDayAndMonth: async (req, res) => {
+  // 3. Tổng số phòng theo dãy, tháng, năm
+ getRoomStatusCountByDayMonthYear: async (req, res) => {
     try {
       const { ma_day, month, year } = req.params;
-      const data = await ThongKe.getPaidRentByDayAndMonth(ma_day, parseInt(month), parseInt(year));
+      const data = await ThongKe.getRoomStatusCountByDayMonthYear(ma_day, parseInt(month), parseInt(year));
       res.json(data);
     } catch (error) {
-      console.error('Error getPaidRentByDayAndMonth:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
-
-  // 3. Tổng số phòng đã thanh toán theo dãy, tháng, năm
-  getPaidRoomCountByDayAndMonth: async (req, res) => {
-    try {
-      const { ma_day, month, year } = req.params;
-      const data = await ThongKe.getPaidRoomCountByDayAndMonth(ma_day, parseInt(month), parseInt(year));
-      res.json(data);
-    } catch (error) {
-      console.error('Error getPaidRoomCountByDayAndMonth:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
-
-  // 4. Tổng số phòng trễ hạn theo dãy, tháng, năm
-  getOverdueRoomCountByDayAndMonth: async (req, res) => {
-    try {
-      const { ma_day, month, year } = req.params;
-      const data = await ThongKe.getOverdueRoomCountByDayAndMonth(ma_day, parseInt(month), parseInt(year));
-      res.json(data);
-    } catch (error) {
-      console.error('Error getOverdueRoomCountByDayAndMonth:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  },
-
-  // 5. Tổng số phòng chưa đóng theo dãy, tháng, năm
-  getUnpaidRoomCountByDayAndMonth: async (req, res) => {
-    try {
-      const { ma_day, month, year } = req.params;
-      const data = await ThongKe.getUnpaidRoomCountByDayAndMonth(ma_day, parseInt(month), parseInt(year));
-      res.json(data);
-    } catch (error) {
-      console.error('Error getUnpaidRoomCountByDayAndMonth:', error);
+      console.error('Error getRoomStatusCountByDayMonthYear:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   },
