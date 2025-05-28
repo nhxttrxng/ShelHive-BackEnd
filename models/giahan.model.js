@@ -236,21 +236,34 @@ GiaHan.calculateExpectedInterest = async (maHoaDon, hanThanhToanMoi, laiSuat) =>
     throw new Error('Không tìm thấy hóa đơn');
   }
   
-  // Tính số ngày gia hạn
-  const hanGoc = new Date(hoaDon.han_dong_tien);
-  const hanMoi = new Date(hanThanhToanMoi);
-  const soNgayGiaHan = getDiffInDays(hanGoc, hanMoi);  // <-- sửa đoạn này
+  // Đảm bảo các giá trị là số, không phải null, undefined hay string
+  const tienPhong = Number(hoaDon.tien_phong) || 0;
+  const tienDien = Number(hoaDon.tien_dien) || 0;
+  const tienNuoc = Number(hoaDon.tien_nuoc) || 0;
+  const tongTienDichVu = tienPhong + tienDien + tienNuoc;
 
-  // Tính tiền lãi dự kiến
-  const tienLaiDuKien = (hoaDon.tong_tien * (laiSuat / 100) * soNgayGiaHan);
+  const soNgayGiaHan = getDiffInDays(new Date(hoaDon.han_dong_tien), new Date(hanThanhToanMoi));
+  const laiSuatNum = Number(laiSuat) || 0;
+
+  // Tính tiền lãi dự kiến (nếu soNgayGiaHan <= 0 thì trả về 0)
+  let tienLaiDuKien = 0;
+  if (soNgayGiaHan > 0) {
+    tienLaiDuKien = tongTienDichVu * (laiSuatNum / 100) * soNgayGiaHan;
+  }
+
+  // Chặn số vượt quá max của numeric(10,2) Postgres: 99999999.99
+  if (Math.abs(tienLaiDuKien) > 99999999.99) {
+    throw new Error('Tiền lãi dự kiến vượt quá giới hạn cho phép');
+  }
   
   return {
-    tong_tien: hoaDon.tong_tien,
-    lai_suat: laiSuat,
+    tong_tien_dich_vu: tongTienDichVu,
+    lai_suat: laiSuatNum,
     so_ngay_gia_han: soNgayGiaHan,
     tien_lai_tinh_du_kien: Math.round(tienLaiDuKien * 100) / 100 // Làm tròn 2 chữ số thập phân
   };
 };
+
 
 // Lấy lịch sử gia hạn của hóa đơn
 GiaHan.getGiaHanHistoryByHoaDonId = async (maHoaDon) => {
