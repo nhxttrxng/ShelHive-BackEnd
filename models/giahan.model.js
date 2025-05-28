@@ -216,4 +216,27 @@ GiaHan.getGiaHanHistoryByHoaDonId = async (maHoaDon) => {
   return result.rows;
 };
 
+GiaHan.getLatestApprovedExtensionByInvoiceId = async (maHoaDon) => {
+  const query = `
+    SELECT * FROM gia_han
+    WHERE ma_hoa_don = $1 AND trang_thai = 'đã duyệt'
+    ORDER BY ma_gia_han DESC
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [maHoaDon]);
+  return result.rows[0];
+};
+
+GiaHan.getPendingExtensionsByRoomId = async (maPhong) => {
+  const query = `
+    SELECT gh.*
+    FROM gia_han gh
+    JOIN hoa_don hd ON gh.ma_hoa_don = hd.ma_hoa_don
+    WHERE hd.ma_phong = $1 AND gh.trang_thai = 'chờ xác nhận'
+    ORDER BY gh.ma_gia_han DESC
+  `;
+  const result = await pool.query(query, [maPhong]);
+  return result.rows;
+};
+
 module.exports = GiaHan;

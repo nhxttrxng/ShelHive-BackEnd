@@ -279,3 +279,39 @@ exports.getExtensionHistoryByInvoice = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 }; 
+
+// Lấy gia hạn mới nhất đã duyệt theo mã hóa đơn
+exports.getLatestApprovedExtensionByInvoiceId = async (req, res) => {
+  const { invoiceId } = req.params;
+
+  try {
+    const invoice = await HoaDon.getHoaDonById(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
+    }
+
+    const latestExtension = await GiaHan.getLatestApprovedExtensionByInvoiceId(invoiceId);
+    if (!latestExtension) {
+      return res.status(404).json({ message: 'Không có gia hạn đã duyệt cho hóa đơn này' });
+    }
+
+    res.status(200).json(latestExtension);
+  } catch (err) {
+    console.error('Lỗi khi lấy gia hạn đã duyệt mới nhất:', err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+// Lấy các gia hạn "chờ xác nhận" theo mã phòng
+exports.getPendingExtensionsByRoomId = async (req, res) => {
+  const { roomId } = req.params;
+
+  try {
+    const pendingExtensions = await GiaHan.getPendingExtensionsByRoomId(roomId);
+
+    res.status(200).json(pendingExtensions);
+  } catch (err) {
+    console.error('Lỗi khi lấy gia hạn chờ xác nhận theo mã phòng:', err);
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
