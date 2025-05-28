@@ -175,6 +175,12 @@ GiaHan.deleteGiaHan = async (maGiaHan) => {
   return result.rows[0];
 };
 
+function getDiffInDays(date1, date2) {
+  const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+  const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+  return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+}
+
 // Tính toán tiền lãi dự kiến
 GiaHan.calculateExpectedInterest = async (maHoaDon, hanThanhToanMoi, laiSuat) => {
   // Lấy thông tin hóa đơn
@@ -192,8 +198,8 @@ GiaHan.calculateExpectedInterest = async (maHoaDon, hanThanhToanMoi, laiSuat) =>
   // Tính số ngày gia hạn
   const hanGoc = new Date(hoaDon.han_dong_tien);
   const hanMoi = new Date(hanThanhToanMoi);
-  const soNgayGiaHan = Math.ceil((hanMoi - hanGoc) / (1000 * 60 * 60 * 24));
-  
+  const soNgayGiaHan = getDiffInDays(hanGoc, hanMoi);  // <-- sửa đoạn này
+
   // Tính tiền lãi dự kiến
   const tienLaiDuKien = (hoaDon.tong_tien * (laiSuat / 100) * soNgayGiaHan);
   
