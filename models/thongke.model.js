@@ -70,7 +70,7 @@ async getElectricProfitByDayAndRange(ma_day, fromMonth, fromYear, toMonth, toYea
 
 
 // 7. Thống kê tiền lời nước theo dãy theo tháng và năm
-async getWaterProfitByDayAndRange(ma_day, month, year) {
+async getWaterProfitByDayAndRange(ma_day, fromMonth, fromYear, toMonth, toYear) {
   const query = `
     SELECT 
       d.ma_day,
@@ -81,14 +81,14 @@ async getWaterProfitByDayAndRange(ma_day, month, year) {
     JOIN phong p ON hd.ma_phong = p.ma_phong
     JOIN day_tro d ON p.ma_day = d.ma_day
     JOIN day_tro dt ON p.ma_day = dt.ma_day
-    WHERE hd.trang_thai = 'đã thanh toán' 
+    WHERE hd.trang_thai = 'đã thanh toán'
       AND d.ma_day = $1
-      AND EXTRACT(MONTH FROM hd.thang_nam) = $2
-      AND EXTRACT(YEAR FROM hd.thang_nam) = $3
+      AND (EXTRACT(YEAR FROM hd.thang_nam) * 100 + EXTRACT(MONTH FROM hd.thang_nam))
+          BETWEEN ($2 * 100 + $3) AND ($4 * 100 + $5)
     GROUP BY d.ma_day, month, year
     ORDER BY year, month;
   `;
-  const result = await db.query(query, [ma_day, month, year]);
+  const result = await db.query(query, [ma_day, fromMonth, fromYear, toMonth, toYear]);
   return result.rows;
 },
 
