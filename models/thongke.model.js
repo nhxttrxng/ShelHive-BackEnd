@@ -88,7 +88,7 @@ async getWaterProfitByDayAndRange(ma_day, fromMonth, fromYear, toMonth, toYear) 
     GROUP BY d.ma_day, month, year
     ORDER BY year, month;
   `;
-  const result = await db.query(query, [ma_day, fromMonth, fromYear, toMonth, toYear]);
+  const result = await db.query(query, [ma_day, fromYear, fromMonth, toYear, toMonth]);
   return result.rows;
 },
 
