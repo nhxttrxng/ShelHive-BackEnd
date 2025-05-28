@@ -245,7 +245,7 @@ exports.updateInvoice = async (req, res) => {
     so_nuoc,
     tien_phong,
     tong_tien,
-    tien_nuoc_final
+    tien_lai_gia_han
   } = req.body;
 
   try {
