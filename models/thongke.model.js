@@ -4,13 +4,12 @@ const ThongKe = {
 // 1. Tổng tiền trọ chưa thanh toán và đã thanh toán theo dãy theo tháng và năm
 async getRentStatsByDayMonthYear(ma_day, month, year) {
   const query = `
-      SELECT 
+     SELECT 
       d.ma_day,
       EXTRACT(MONTH FROM hd.thang_nam) AS month,
       EXTRACT(YEAR FROM hd.thang_nam) AS year,
-      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'đã thanh toán' THEN hd.ma_phong ELSE NULL END) AS paid_room_count,
-      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'trễ hạn' THEN hd.ma_phong ELSE NULL END) AS overdue_room_count,
-      COUNT(DISTINCT CASE WHEN hd.trang_thai = 'chưa thanh toán' THEN hd.ma_phong ELSE NULL END) AS unpaid_room_count
+      SUM(CASE WHEN hd.trang_thai = 'chưa thanh toán' THEN hd.tien_phong ELSE 0 END) AS total_unpaid_rent,
+      SUM(CASE WHEN hd.trang_thai = 'đã thanh toán' THEN hd.tong_tien ELSE 0 END) AS total_paid_rent
     FROM hoa_don hd
     JOIN phong p ON hd.ma_phong = p.ma_phong
     JOIN day_tro d ON p.ma_day = d.ma_day
@@ -24,7 +23,7 @@ async getRentStatsByDayMonthYear(ma_day, month, year) {
   return result.rows;
 },
 
-// 3. Tổng số phòng đã thanh toán theo dãy theo tháng và năm
+// 3. Tổng số phòng đã thanh toán, chưa thanh toán, trễ hạn theo dãy theo tháng và năm
 async getRoomStatusCountByDayMonthYear(ma_day, month, year) {
   const query = `
     SELECT 

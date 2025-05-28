@@ -5,7 +5,7 @@ const thongKeController = require('../controllers/stat.controller');
 // Các route theo từng chức năng
 
 // 1. Tổng tiền trọ chưa thanh toán theo dãy, tháng, năm
-router.get('/unpaid-rent/:ma_day/:month/:year', thongKeController.getRentStatsByDayMonthYear);
+router.get('/rent-money/:ma_day/:month/:year', thongKeController.getRentStatsByDayMonthYear);
 
 // 3. Tổng số phòng đã thanh toán theo dãy, tháng, năm
 router.get('/room_count/:ma_day/:month/:year', thongKeController.getRoomStatusCountByDayMonthYear);
