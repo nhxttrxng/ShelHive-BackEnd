@@ -3,8 +3,8 @@ const PhanAnh = require('../models/phananh.model');
 const PhanAnhController = {
   async getByTinhTrang(req, res) {
     try {
-      const { tinh_trang } = req.params;
-      const data = await PhanAnh.getByTinhTrang(tinh_trang);
+      const { tinh_trang,ma_day } = req.params;
+      const data = await PhanAnh.getByTinhTrang(tinh_trang,ma_day);
       res.json(data);
     } catch (error) {
       console.error(error);
