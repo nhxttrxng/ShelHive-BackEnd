@@ -1,4 +1,4 @@
-const db = require('../db'); // Đường dẫn tuỳ dự án
+const db = require('../db/postgres'); // Đường dẫn tuỳ dự án
 
 async function updateLateBills() {
   const query = `
