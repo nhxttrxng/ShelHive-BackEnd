@@ -82,19 +82,19 @@ HoaDon.updateHoaDon = async (id, data) => {
   const {
     ma_phong, tong_tien, so_dien, so_nuoc, han_dong_tien, trang_thai,
     chi_so_dien_cu, chi_so_dien_moi, chi_so_nuoc_cu, chi_so_nuoc_moi,
-    tien_dien, tien_nuoc, tien_phong, thang_nam, ngay_thanh_toan
+    tien_dien, tien_nuoc, tien_phong, thang_nam, ngay_thanh_toan, tien_lai_gia_han
   } = data;
 
   const result = await pool.query(
     `UPDATE hoa_don SET
       ma_phong=$1, tong_tien=$2, so_dien=$3, so_nuoc=$4, han_dong_tien=$5, trang_thai=$6,
       chi_so_dien_cu=$7, chi_so_dien_moi=$8, chi_so_nuoc_cu=$9, chi_so_nuoc_moi=$10,
-      tien_dien=$11, tien_nuoc=$12, tien_phong=$13, thang_nam=$14, ngay_thanh_toan=$15
-    WHERE ma_hoa_don=$16 RETURNING *`,
+      tien_dien=$11, tien_nuoc=$12, tien_phong=$13, thang_nam=$14, ngay_thanh_toan=$15, tien_lai_gia_han=$16
+    WHERE ma_hoa_don=$17 RETURNING *`,
     [
       ma_phong, tong_tien, so_dien, so_nuoc, han_dong_tien, trang_thai,
       chi_so_dien_cu, chi_so_dien_moi, chi_so_nuoc_cu, chi_so_nuoc_moi,
-      tien_dien, tien_nuoc, tien_phong, thang_nam, ngay_thanh_toan, id
+      tien_dien, tien_nuoc, tien_phong, thang_nam, ngay_thanh_toan, tien_lai_gia_han, id
     ]
   );
 
@@ -142,7 +142,12 @@ HoaDon.approveExtension = async (id) => {
 
 // Xóa hóa đơn
 HoaDon.deleteHoaDon = async (id) => {
-  const result = await pool.query(`DELETE FROM hoa_don WHERE ma_hoa_don=$1 RETURNING *`, [id]);
+  // Xoá thông báo liên quan
+  await pool.query('DELETE FROM thong_bao_hoa_don WHERE ma_hoa_don = $1', [id]);
+  // Xoá gia hạn liên quan
+  await pool.query('DELETE FROM gia_han WHERE ma_hoa_don = $1', [id]);
+  // Xoá hoá đơn
+  const result = await pool.query('DELETE FROM hoa_don WHERE ma_hoa_don = $1 RETURNING *', [id]);
   return result.rows[0];
 };
 

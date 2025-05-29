@@ -103,25 +103,76 @@ GiaHan.updateGiaHanStatus = async (maGiaHan, trangThai) => {
 
 // Duyệt yêu cầu gia hạn và cập nhật hóa đơn
 GiaHan.approveGiaHan = async (maGiaHan) => {
-  // Thực hiện transaction để đảm bảo tính nhất quán dữ liệu
   const client = await pool.connect();
-  
   try {
     await client.query('BEGIN');
-    
-    // Lấy thông tin gia hạn
-    const giaHanQuery = `
-      SELECT * FROM gia_han 
-      WHERE ma_gia_han = $1
-    `;
+
+    // 1. Lấy thông tin gia hạn
+    const giaHanQuery = `SELECT * FROM gia_han WHERE ma_gia_han = $1`;
     const giaHanResult = await client.query(giaHanQuery, [maGiaHan]);
     const giaHan = giaHanResult.rows[0];
-    
+
     if (!giaHan) {
       throw new Error('Không tìm thấy yêu cầu gia hạn');
     }
-    
-    // Cập nhật trạng thái gia hạn thành "đã duyệt"
+
+    // 2. Lấy thông tin hóa đơn liên quan
+    const hoaDonQuery = `SELECT * FROM hoa_don WHERE ma_hoa_don = $1`;
+    const hoaDonResult = await client.query(hoaDonQuery, [giaHan.ma_hoa_don]);
+    const hoaDon = hoaDonResult.rows[0];
+
+    if (!hoaDon) {
+      throw new Error('Không tìm thấy hóa đơn liên quan');
+    }
+
+    // 3. Tính số ngày gia hạn dùng hàm đã có
+    const soNgayGiaHan = getDiffInDays(
+      new Date(giaHan.han_dong_tien_goc),
+      new Date(giaHan.han_thanh_toan_moi)
+    );
+
+    // 4. Tính lại tổng tiền mới
+    function toSafeNumber(val) {
+      const num = parseFloat(val);
+      return isNaN(num) ? 0 : num;
+    }
+
+    const tongTienMoi =
+      toSafeNumber(giaHan.tien_lai_tinh_du_kien) +
+      toSafeNumber(hoaDon.tien_dien) +
+      toSafeNumber(hoaDon.tien_nuoc) +
+      toSafeNumber(hoaDon.tien_phong);
+
+    // 5. Nếu hạn đóng tiền < ngày gia hạn, cập nhật trạng thái
+    let trangThaiMoi = hoaDon.trang_thai;
+    if (new Date(hoaDon.han_dong_tien) < new Date(giaHan.han_thanh_toan_moi)) {
+      trangThaiMoi = 'chưa thanh toán';
+    }
+
+    // 6. Cập nhật hóa đơn (KHÔNG UPDATE han_dong_tien)
+    const updateHoaDonQuery = `
+      UPDATE hoa_don
+      SET 
+        ngay_gia_han = $1,
+        so_ngay_gia_han = $2,
+        tien_lai_gia_han = $3,
+        da_duyet_gia_han = true,
+        ngay_cap_nhat_gia_han = NOW(),
+        tong_tien = $4,
+        trang_thai = $5
+      WHERE ma_hoa_don = $6
+      RETURNING *
+    `;
+    const updateHoaDonResult = await client.query(updateHoaDonQuery, [
+      giaHan.han_thanh_toan_moi,
+      soNgayGiaHan,
+      giaHan.tien_lai_tinh_du_kien,
+      tongTienMoi,
+      trangThaiMoi,
+      giaHan.ma_hoa_don
+    ]);
+
+    // 7. Update trạng thái gia hạn thành đã duyệt
     const updateGiaHanQuery = `
       UPDATE gia_han
       SET trang_thai = 'đã duyệt'
@@ -129,19 +180,9 @@ GiaHan.approveGiaHan = async (maGiaHan) => {
       RETURNING *
     `;
     const updatedGiaHan = await client.query(updateGiaHanQuery, [maGiaHan]);
-    
-    // Cập nhật hạn đóng tiền mới cho hóa đơn
-    const updateHoaDonQuery = `
-      UPDATE hoa_don
-      SET han_dong_tien = $1,
-          da_duyet_gia_han = true
-      WHERE ma_hoa_don = $2
-      RETURNING *
-    `;
-    await client.query(updateHoaDonQuery, [giaHan.han_thanh_toan_moi, giaHan.ma_hoa_don]);
-    
+
     await client.query('COMMIT');
-    return updatedGiaHan.rows[0];
+    return updateHoaDonResult.rows[0];
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -175,6 +216,12 @@ GiaHan.deleteGiaHan = async (maGiaHan) => {
   return result.rows[0];
 };
 
+function getDiffInDays(date1, date2) {
+  const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+  const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+  return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+}
+
 // Tính toán tiền lãi dự kiến
 GiaHan.calculateExpectedInterest = async (maHoaDon, hanThanhToanMoi, laiSuat) => {
   // Lấy thông tin hóa đơn
@@ -189,21 +236,34 @@ GiaHan.calculateExpectedInterest = async (maHoaDon, hanThanhToanMoi, laiSuat) =>
     throw new Error('Không tìm thấy hóa đơn');
   }
   
-  // Tính số ngày gia hạn
-  const hanGoc = new Date(hoaDon.han_dong_tien);
-  const hanMoi = new Date(hanThanhToanMoi);
-  const soNgayGiaHan = Math.ceil((hanMoi - hanGoc) / (1000 * 60 * 60 * 24));
-  
-  // Tính tiền lãi dự kiến
-  const tienLaiDuKien = (hoaDon.tong_tien * (laiSuat / 100) * soNgayGiaHan) / 30; // Tính lãi theo tháng (30 ngày)
+  // Đảm bảo các giá trị là số, không phải null, undefined hay string
+  const tienPhong = Number(hoaDon.tien_phong) || 0;
+  const tienDien = Number(hoaDon.tien_dien) || 0;
+  const tienNuoc = Number(hoaDon.tien_nuoc) || 0;
+  const tongTienDichVu = tienPhong + tienDien + tienNuoc;
+
+  const soNgayGiaHan = getDiffInDays(new Date(hoaDon.han_dong_tien), new Date(hanThanhToanMoi));
+  const laiSuatNum = Number(laiSuat) || 0;
+
+  // Tính tiền lãi dự kiến (nếu soNgayGiaHan <= 0 thì trả về 0)
+  let tienLaiDuKien = 0;
+  if (soNgayGiaHan > 0) {
+    tienLaiDuKien = tongTienDichVu * (laiSuatNum / 100) * soNgayGiaHan;
+  }
+
+  // Chặn số vượt quá max của numeric(10,2) Postgres: 99999999.99
+  if (Math.abs(tienLaiDuKien) > 99999999.99) {
+    throw new Error('Tiền lãi dự kiến vượt quá giới hạn cho phép');
+  }
   
   return {
-    tong_tien: hoaDon.tong_tien,
-    lai_suat: laiSuat,
+    tong_tien_dich_vu: tongTienDichVu,
+    lai_suat: laiSuatNum,
     so_ngay_gia_han: soNgayGiaHan,
-    tien_lai_du_kien: Math.round(tienLaiDuKien * 100) / 100 // Làm tròn 2 chữ số thập phân
+    tien_lai_tinh_du_kien: Math.round(tienLaiDuKien * 100) / 100 // Làm tròn 2 chữ số thập phân
   };
 };
+
 
 // Lấy lịch sử gia hạn của hóa đơn
 GiaHan.getGiaHanHistoryByHoaDonId = async (maHoaDon) => {
@@ -213,6 +273,29 @@ GiaHan.getGiaHanHistoryByHoaDonId = async (maHoaDon) => {
     ORDER BY ma_gia_han ASC
   `;
   const result = await pool.query(query, [maHoaDon]);
+  return result.rows;
+};
+
+GiaHan.getLatestApprovedExtensionByInvoiceId = async (maHoaDon) => {
+  const query = `
+    SELECT * FROM gia_han
+    WHERE ma_hoa_don = $1 AND trang_thai = 'đã duyệt'
+    ORDER BY ma_gia_han DESC
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [maHoaDon]);
+  return result.rows[0];
+};
+
+GiaHan.getPendingExtensionsByRoomId = async (maPhong) => {
+  const query = `
+    SELECT gh.*
+    FROM gia_han gh
+    JOIN hoa_don hd ON gh.ma_hoa_don = hd.ma_hoa_don
+    WHERE hd.ma_phong = $1 AND gh.trang_thai = 'chờ xác nhận'
+    ORDER BY gh.ma_gia_han DESC
+  `;
+  const result = await pool.query(query, [maPhong]);
   return result.rows;
 };
 

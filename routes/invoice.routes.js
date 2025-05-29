@@ -41,12 +41,6 @@ router.put('/:id', invoiceController.updateInvoice);
 // Cập nhật trạng thái hóa đơn 
 router.patch('/:id/status', invoiceController.updateInvoiceStatus);
 
-// Yêu cầu gia hạn hóa đơn
-router.post('/:id/request-extension', invoiceController.requestExtension);
-
-// Duyệt gia hạn hóa đơn 
-router.patch('/:id/approve-extension', invoiceController.approveExtension);
-
 // Xóa hóa đơn
 router.delete('/:id', invoiceController.deleteInvoice);
 

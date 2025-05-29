@@ -32,4 +32,7 @@ router.patch('/:id/reject', extensionController.rejectExtension);
 // Xóa yêu cầu gia hạn
 router.delete('/:id', extensionController.deleteExtension);
 
+router.get('/latest-approved/:invoiceId', extensionController.getLatestApprovedExtensionByInvoiceId);
+router.get('/pending-by-room/:roomId', extensionController.getPendingExtensionsByRoomId);
+
 module.exports = router; 

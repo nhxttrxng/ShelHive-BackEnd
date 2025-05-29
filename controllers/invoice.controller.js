@@ -115,7 +115,9 @@ exports.createInvoice = async (req, res) => {
     chi_so_dien_moi, 
     chi_so_nuoc_cu,   // Có thể null/undefined
     chi_so_nuoc_moi, 
-    tien_phong,
+    tien_phong,       // Có thể truyền 0 nếu bỏ chọn
+    tien_dien,        // Có thể truyền 0 nếu bỏ chọn
+    tien_nuoc,        // Có thể truyền 0 nếu bỏ chọn
     han_dong_tien,
     thang_nam 
   } = req.body;
@@ -158,10 +160,10 @@ exports.createInvoice = async (req, res) => {
       }
     }
 
-    // Lấy giá điện, nước của dãy trọ
+    // Lấy giá điện, nước của dãy trọ để tính mặc định nếu không truyền từ FE
     const dayTro = await DayTro.getDayTroByMaDay(room.ma_day);
 
-    // Tính số lượng tiêu thụ và tiền điện, nước
+    // Tính số lượng tiêu thụ
     const so_dien = chi_so_dien_moi - cs_dien_cu;
     const so_nuoc = chi_so_nuoc_moi - cs_nuoc_cu;
 
@@ -175,15 +177,22 @@ exports.createInvoice = async (req, res) => {
       });
     }
 
-    const tien_dien = so_dien * dayTro.gia_dien;
-    const tien_nuoc = so_nuoc * dayTro.gia_nuoc;
+    // Nếu FE truyền lên đã có tiền điện/nước/phòng thì dùng luôn; nếu không, BE tự tính
+    let tien_dien_final;
+    if (typeof tien_dien === 'number') tien_dien_final = tien_dien;
+    else tien_dien_final = so_dien * dayTro.gia_dien;
 
-    // Giá phòng mặc định là 1,100,000 đồng nếu không có
+    let tien_nuoc_final;
+    if (typeof tien_nuoc === 'number') tien_nuoc_final = tien_nuoc;
+    else tien_nuoc_final = so_nuoc * dayTro.gia_nuoc;
+
     const DEFAULT_ROOM_PRICE = 1100000.00;
-    const tien_phong_final = tien_phong || (room.gia_thue && room.gia_thue > 0 ? room.gia_thue : DEFAULT_ROOM_PRICE);
+    let tien_phong_final;
+    if (typeof tien_phong === 'number') tien_phong_final = tien_phong;
+    else tien_phong_final = (room.gia_thue && room.gia_thue > 0 ? room.gia_thue : DEFAULT_ROOM_PRICE);
 
-    // Tính tổng tiền
-    const tong_tien = tien_dien + tien_nuoc + tien_phong_final;
+    // Tổng tiền
+    const tong_tien = tien_dien_final + tien_nuoc_final + tien_phong_final;
 
     // Tạo hóa đơn
     const newInvoice = await HoaDon.addHoaDon({
@@ -195,8 +204,8 @@ exports.createInvoice = async (req, res) => {
       chi_so_dien_moi,
       chi_so_nuoc_cu: cs_nuoc_cu,
       chi_so_nuoc_moi,
-      tien_dien,
-      tien_nuoc,
+      tien_dien: tien_dien_final,
+      tien_nuoc: tien_nuoc_final,
       tien_phong: tien_phong_final,
       han_dong_tien,
       trang_thai: 'chưa thanh toán',
@@ -204,14 +213,14 @@ exports.createInvoice = async (req, res) => {
       thang_nam
     });
 
-    // Tạo thông báo hóa đơn mới (chỉ gồm 3 trường: mã, nội dung, ngày tạo)
+    // Tạo thông báo hóa đơn mới
     const hanDongTien = new Date(han_dong_tien).toLocaleDateString('vi-VN');
     const noiDungThongBao = `Hóa đơn mới: Phòng ${ma_phong} có hóa đơn ${formatCurrency(tong_tien)}đ, hạn đóng tiền ${hanDongTien}`;
 
     await ThongBaoHoaDon.createNotification({
       ma_hoa_don: newInvoice.ma_hoa_don,
       noi_dung: noiDungThongBao,
-      ngay_tao: new Date() // Bổ sung ngày tạo
+      ngay_tao: new Date()
     });
 
     res.status(201).json({
@@ -227,65 +236,45 @@ exports.createInvoice = async (req, res) => {
 // Cập nhật hóa đơn
 exports.updateInvoice = async (req, res) => {
   const { id } = req.params;
-  const { ma_phong, tong_tien, so_dien, so_nuoc, han_dong_tien, trang_thai } = req.body;
-  
+  const {
+    chi_so_dien_moi,
+    chi_so_nuoc_moi,
+    tien_dien,
+    tien_nuoc,
+    so_dien,
+    so_nuoc,
+    tien_phong,
+    tong_tien,
+    tien_lai_gia_han
+  } = req.body;
+
   try {
-    // Tạm thời bỏ kiểm tra quyền admin
-    /* if (!req.user || !req.user.is_admin) {
-      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa hóa đơn, chỉ admin mới được phép' });
-    } */
-    
-    // Kiểm tra xem hóa đơn có tồn tại không
+    // Lấy hóa đơn hiện tại từ DB
     const invoice = await HoaDon.getHoaDonById(id);
-    
     if (!invoice) {
       return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
     }
-    
-    // Nếu có thay đổi phòng, kiểm tra phòng mới có tồn tại không
-    if (ma_phong && ma_phong !== invoice.ma_phong) {
-      const room = await Phong.getPhongByMaPhong(ma_phong);
-      
-      if (!room) {
-        return res.status(404).json({ message: 'Không tìm thấy phòng' });
-      }
-    }
-    
+
+    // Update chỉ những trường bạn muốn, các trường còn lại giữ nguyên
     const updatedInvoice = await HoaDon.updateHoaDon(id, {
-      ma_phong: ma_phong || invoice.ma_phong,
-      tong_tien: tong_tien || invoice.tong_tien,
-      so_dien: so_dien || invoice.so_dien,
-      so_nuoc: so_nuoc || invoice.so_nuoc,
-      han_dong_tien: han_dong_tien || invoice.han_dong_tien,
-      trang_thai: trang_thai || invoice.trang_thai
+      ma_phong: invoice.ma_phong,
+      tong_tien: tong_tien !== undefined ? tong_tien : invoice.tong_tien,
+      so_dien: so_dien !== undefined ? so_dien : invoice.so_dien,
+      so_nuoc: so_nuoc !== undefined ? so_nuoc : invoice.so_nuoc,
+      han_dong_tien: invoice.han_dong_tien,
+      trang_thai: invoice.trang_thai,
+      chi_so_dien_cu: invoice.chi_so_dien_cu,
+      chi_so_dien_moi: chi_so_dien_moi !== undefined ? chi_so_dien_moi : invoice.chi_so_dien_moi,
+      chi_so_nuoc_cu: invoice.chi_so_nuoc_cu,
+      chi_so_nuoc_moi: chi_so_nuoc_moi !== undefined ? chi_so_nuoc_moi : invoice.chi_so_nuoc_moi,
+      tien_dien: tien_dien !== undefined ? tien_dien : invoice.tien_dien,
+      tien_nuoc: tien_nuoc !== undefined ? tien_nuoc : invoice.tien_nuoc,
+      tien_phong: tien_phong !== undefined ? tien_phong : invoice.tien_phong,
+      thang_nam: invoice.thang_nam,
+      ngay_thanh_toan: invoice.ngay_thanh_toan,
+      tien_lai_gia_han: tien_lai_gia_han !== undefined ? tien_lai_gia_han : invoice.tien_lai_gia_han
     });
-    
-    // Tạo thông báo về việc cập nhật hóa đơn
-    const currentMaPhong = ma_phong || invoice.ma_phong;
-    const room = await Phong.getPhongByMaPhong(currentMaPhong);
-    
-    if (room) {
-      const ma_day = room.ma_day;
-      let noiDungThongBao = `Hóa đơn phòng ${currentMaPhong} đã được cập nhật.`;
-      
-      // Thêm chi tiết về những thay đổi quan trọng
-      if (tong_tien && tong_tien !== invoice.tong_tien) {
-        noiDungThongBao += ` Tổng tiền mới: ${formatCurrency(tong_tien)}đ.`;
-      }
-      
-      if (han_dong_tien && han_dong_tien !== invoice.han_dong_tien) {
-        const hanMoi = new Date(han_dong_tien).toLocaleDateString('vi-VN');
-        noiDungThongBao += ` Hạn đóng tiền mới: ${hanMoi}.`;
-      }
-      
-      // Tạo thông báo
-      await Notification.create({
-        ma_day,
-        ma_phong: currentMaPhong,
-        noi_dung: noiDungThongBao
-      });
-    }
-    
+
     res.status(200).json({
       message: 'Cập nhật hóa đơn thành công',
       invoice: updatedInvoice
@@ -357,172 +346,29 @@ exports.updateInvoiceStatus = async (req, res) => {
   }
 };
 
-// Yêu cầu gia hạn hóa đơn
-exports.requestExtension = async (req, res) => {
-  const { id } = req.params;
-  const { ngay_gia_han } = req.body;
-  
-  if (!ngay_gia_han) {
-    return res.status(400).json({ message: 'Thiếu ngày gia hạn' });
-  }
-  
-  try {
-    // Kiểm tra xem hóa đơn có tồn tại không
-    const invoice = await HoaDon.getHoaDonById(id);
-    
-    if (!invoice) {
-      return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
-    }
-    
-    // Kiểm tra nếu hóa đơn đã thanh toán
-    if (invoice.trang_thai === 'đã thanh toán') {
-      return res.status(400).json({ message: 'Hóa đơn đã thanh toán, không thể gia hạn' });
-    }
-    
-    try {
-      const updatedInvoice = await HoaDon.requestExtension(id, ngay_gia_han);
-      
-      // Tạo thông báo về yêu cầu gia hạn
-      const room = await Phong.getPhongByMaPhong(invoice.ma_phong);
-      if (room) {
-        const ma_day = room.ma_day;
-        const ma_phong = invoice.ma_phong;
-        const ngayGiaHanYeuCau = new Date(ngay_gia_han).toLocaleDateString('vi-VN');
-        const hanDongTienCu = new Date(invoice.han_dong_tien).toLocaleDateString('vi-VN');
-        
-        // Tính số ngày gia hạn dự kiến
-        const soNgayGiaHan = Math.ceil((new Date(ngay_gia_han) - new Date(invoice.han_dong_tien)) / (1000 * 60 * 60 * 24));
-        
-        // Tính tiền lãi dự kiến
-        const tienLaiDuKien = invoice.tong_tien * EXTENSION_INTEREST_RATE * soNgayGiaHan;
-        
-        const noiDungThongBao = `Đã có yêu cầu gia hạn hóa đơn phòng ${ma_phong} từ ${hanDongTienCu} đến ${ngayGiaHanYeuCau} (${soNgayGiaHan} ngày). Tiền lãi dự kiến: ${formatCurrency(tienLaiDuKien)}đ (0.5%/ngày).`;
-        
-        // Tạo thông báo
-        await Notification.create({
-          ma_day,
-          ma_phong,
-          noi_dung: noiDungThongBao
-        });
-        
-        // Tạo thông báo riêng cho hóa đơn
-        await ThongBaoHoaDon.create({
-          ma_hoa_don: id,
-          noi_dung: noiDungThongBao
-        });
-      }
-      
-      res.status(200).json({
-        message: 'Yêu cầu gia hạn thành công, đang chờ phê duyệt',
-        invoice: updatedInvoice
-      });
-    } catch (error) {
-      // Bắt các lỗi liên quan đến ngày gia hạn không hợp lệ
-      return res.status(400).json({ 
-        message: 'Yêu cầu gia hạn không hợp lệ', 
-        error: error.message 
-      });
-    }
-  } catch (err) {
-    console.error('Lỗi khi yêu cầu gia hạn hóa đơn:', err);
-    res.status(500).json({ message: 'Lỗi server', error: err.message });
-  }
-};
-
-// Duyệt gia hạn hóa đơn
-exports.approveExtension = async (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    // Kiểm tra xem hóa đơn có tồn tại không
-    const invoice = await HoaDon.getHoaDonById(id);
-    
-    if (!invoice) {
-      return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
-    }
-    
-    // Kiểm tra nếu không có yêu cầu gia hạn
-    if (!invoice.ngay_gia_han) {
-      return res.status(400).json({ message: 'Không có yêu cầu gia hạn cho hóa đơn này' });
-    }
-    
-    // Kiểm tra nếu đã duyệt
-    if (invoice.da_duyet_gia_han) {
-      return res.status(400).json({ message: 'Yêu cầu gia hạn đã được duyệt trước đó' });
-    }
-    
-    const updatedInvoice = await HoaDon.approveExtension(id);
-    
-    // Tạo thông báo về việc phê duyệt gia hạn
-    const room = await Phong.getPhongByMaPhong(invoice.ma_phong);
-    if (room) {
-      const ma_day = room.ma_day;
-      const ma_phong = invoice.ma_phong;
-      const ngayGiaHanMoi = new Date(invoice.ngay_gia_han).toLocaleDateString('vi-VN');
-      
-      let noiDungThongBao = `Yêu cầu gia hạn hóa đơn phòng ${ma_phong} đã được chấp nhận. Hạn thanh toán mới: ${ngayGiaHanMoi}`;
-      
-      // Thêm thông tin về tiền lãi nếu có
-      if (updatedInvoice.tien_lai_gia_han && updatedInvoice.tien_lai_gia_han > 0) {
-        noiDungThongBao += `. Tiền lãi gia hạn: ${formatCurrency(updatedInvoice.tien_lai_gia_han)}đ (0.5%/ngày × ${updatedInvoice.so_ngay_gia_han} ngày). Tổng tiền mới: ${formatCurrency(updatedInvoice.tong_tien)}đ`;
-      }
-      
-      // Tạo thông báo
-      await Notification.create({
-        ma_day,
-        ma_phong,
-        noi_dung: noiDungThongBao
-      });
-    }
-    
-    res.status(200).json({
-      message: 'Duyệt gia hạn hóa đơn thành công',
-      invoice: updatedInvoice
-    });
-  } catch (err) {
-    console.error('Lỗi khi duyệt gia hạn hóa đơn:', err);
-    res.status(500).json({ message: 'Lỗi server', error: err.message });
-  }
-};
-
 // Xóa hóa đơn
 exports.deleteInvoice = async (req, res) => {
   const { id } = req.params;
-  
   try {
-    // Kiểm tra xem hóa đơn có tồn tại không
+    // Kiểm tra tồn tại hóa đơn
     const invoice = await HoaDon.getHoaDonById(id);
-    
     if (!invoice) {
       return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
     }
-    
+
+    // Chỉ cần gọi 1 lệnh này (model đã xử lý tất cả)
     const deletedInvoice = await HoaDon.deleteHoaDon(id);
-    
-    // Tạo thông báo về việc xóa hóa đơn
-    const room = await Phong.getPhongByMaPhong(invoice.ma_phong);
-    if (room) {
-      const ma_day = room.ma_day;
-      const ma_phong = invoice.ma_phong;
-      const noiDungThongBao = `Hóa đơn phòng ${ma_phong} với tổng tiền ${formatCurrency(invoice.tong_tien)}đ đã bị xóa.`;
-      
-      // Tạo thông báo
-      await Notification.create({
-        ma_day,
-        ma_phong,
-        noi_dung: noiDungThongBao
-      });
-    }
-    
-    res.status(200).json({ 
-      message: 'Xóa hóa đơn thành công', 
-      data: deletedInvoice 
+
+    res.status(200).json({
+      message: 'Xóa hóa đơn thành công',
+      data: deletedInvoice
     });
   } catch (err) {
     console.error('Lỗi khi xóa hóa đơn:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
 
 // Lấy thống kê hóa đơn theo tháng
 exports.getMonthlyStats = async (req, res) => {
