@@ -42,7 +42,7 @@ exports.register = async (req, res) => {
       }
     });
 
-    const verifyLink = `https://shelhive-backend.onrender.com/api/auth/verify?token=${token}`;
+    const verifyLink = `https://221.132.33.173:3000/api/auth/verify?token=${token}`;
 
     const mailOptions = {
       from: `"ShelBee 🐝" <${process.env.MAIL_USER}>`,
