@@ -78,10 +78,11 @@ exports.createNotification = async (req, res) => {
   }
 };
 
-// PUT cập nhật
+// ✅ Cập nhật
 exports.updateNotification = async (req, res) => {
   try {
-    const notification = await InvoiceNotification.updateNotification(req.params.id, req.body);
+    const { ma_thong_bao_hoa_don } = req.params;
+    const notification = await InvoiceNotification.updateNotification(ma_thong_bao_hoa_don, req.body);
     if (!notification) return res.status(404).json({ error: 'Không tìm thấy thông báo để cập nhật.' });
     res.json(notification);
   } catch (error) {
@@ -89,13 +90,15 @@ exports.updateNotification = async (req, res) => {
   }
 };
 
-// DELETE xóa
+// ✅ Xóa
 exports.deleteNotification = async (req, res) => {
   try {
-    const notification = await InvoiceNotification.deleteNotification(req.params.id);
+    const { ma_thong_bao_hoa_don } = req.params;
+    const notification = await InvoiceNotification.deleteNotification(ma_thong_bao_hoa_don);
     if (!notification) return res.status(404).json({ error: 'Không tìm thấy thông báo để xóa.' });
     res.json({ message: 'Đã xóa thành công.', deleted: notification });
   } catch (error) {
     res.status(500).json({ error: 'Lỗi khi xóa thông báo.' });
   }
 };
+
