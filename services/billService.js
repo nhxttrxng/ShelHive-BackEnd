@@ -1,11 +1,15 @@
-const db = require('../db/postgres'); // Đường dẫn tuỳ dự án
+const db = require('../db/postgres');
 
 async function updateLateBills() {
   const query = `
     UPDATE hoa_don
     SET trang_thai = 'trễ hạn'
-    WHERE han_dong_tien < CURRENT_DATE
-      AND trang_thai = 'chưa thanh toán'
+    WHERE (
+      (ngay_gia_han IS NOT NULL AND ngay_gia_han < CURRENT_DATE)
+      OR
+      (ngay_gia_han IS NULL AND han_dong_tien < CURRENT_DATE)
+    )
+    AND trang_thai = 'chưa thanh toán'
     RETURNING ma_hoa_don
   `;
   const result = await db.query(query);
