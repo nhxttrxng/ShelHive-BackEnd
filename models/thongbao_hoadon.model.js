@@ -78,7 +78,7 @@ const InvoiceNotification = {
       WHERE ma_thong_bao_hoa_don = $2 RETURNING *
     `;
     const result = await db.query(query, [noi_dung, ma_thong_bao_hoa_don]);
-    return result.rows;
+    return result.rows[0];
   },
 // ...existing code...
 
@@ -86,7 +86,7 @@ const InvoiceNotification = {
   async deleteNotification(ma_thong_bao_hoa_don) {
     const query = 'DELETE FROM thong_bao_hoa_don WHERE ma_thong_bao_hoa_don = $1 RETURNING *';
     const result = await db.query(query, [ma_thong_bao_hoa_don]);
-    return result.rows;
+    return result.rows[0];
   },
 };
 
